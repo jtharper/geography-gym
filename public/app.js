@@ -165,7 +165,7 @@ function loadProgress(id) {
   let s = { p: {}, best: {} };
   try {
     const raw = localStorage.getItem(`geography-gym-${id}-v1`) || (id === "flags" ? localStorage.getItem("flag-atlas-v1") : null);
-    if (raw) { const o = JSON.parse(raw); s = { p: o.p || {}, best: o.best || {} }; }
+    if (raw) { const o = JSON.parse(raw); s = { p: o.p || {}, best: o.best || {}, n: o.n || 0 }; }
   } catch (e) {}
   return s;
 }
@@ -234,7 +234,11 @@ function buildTopic(def) {
   if (def.kind === "neighbors") set.rows.forEach(r => [r.n, ...(r.a || [])].forEach(a => { const k = norm(a); if (!alias.has(k)) alias.set(k, new Set()); alias.get(k).add(r.c); }));
   const byId = Object.fromEntries(items.map(i => [i.id, i]));
   const rowById = Object.fromEntries(set.rows.map(r => [r.c, r]));
-  return { def, items, byId, rowById, alias, img: set.img, prog: loadProgress(def.id), pref: prefs(def) };
+  const prog = loadProgress(def.id), pref = prefs(def);
+  // Remember how many items this topic has, for the stats page
+  const n = items.filter(it => pref.terr || it.k !== "territory").length;
+  if (prog.n !== n) { prog.n = n; if (Object.keys(prog.p).length) try { localStorage.setItem(`geography-gym-${def.id}-v1`, JSON.stringify(prog)); } catch (e) {} }
+  return { def, items, byId, rowById, alias, img: set.img, prog, pref };
 }
 function saveProgress() { try { localStorage.setItem(`geography-gym-${T.def.id}-v1`, JSON.stringify(T.prog)); } catch (e) {} }
 function rec(id) { return T.prog.p[id] || (T.prog.p[id] = { b: 0, s: 0, r: 0 }); }
@@ -332,7 +336,7 @@ function setPop(btn, open) {
 }
 POPS.forEach(([b, p]) => b.addEventListener("click", e => {
   e.stopPropagation();
-  if (p === menu && p.hidden && T) showMenuGroup(T.def.group);
+  if (p === menu && p.hidden) showMenuGroup(special ? SPECIAL_GROUP : T ? T.def.group : GROUP_NAMES[0]);
   setPop(b, p.hidden);
 }));
 document.addEventListener("click", e => { if (anyOpen() && !POPS.some(([b, p]) => p.contains(e.target) || b.contains(e.target))) setPop(null, false); });
@@ -344,26 +348,27 @@ menu.addEventListener("click", e => { if (e.target.closest("a[href^='#']")) setP
 
 const CHECK = `<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
 // Topic menu: a row of group tabs, then the topics of one group (keeps the list short)
-const GROUP_NAMES = [...new Set(TOPICS.map(t => t.group))];
+const GROUP_NAMES = [...new Set(TOPICS.map(t => t.group)), "Daily & stats"];
 let menuGroup = GROUP_NAMES[0];
 function renderTopicMenu() {
   $("#menuTabs").innerHTML = GROUP_NAMES.map(g => `<button type="button" role="tab" data-group="${esc(g)}" aria-selected="${g === menuGroup}">${esc(g)}</button>`).join("");
-  $("#topicList").innerHTML = TOPICS.map(t => `<a href="#${t.id}-practice" data-topic="${t.id}"${t.group === menuGroup ? "" : " hidden"}>${esc(t.short || t.name)}${CHECK}</a>`).join("");
+  $("#topicList").innerHTML = TOPICS.map(t => `<a href="#${t.id}-practice" data-topic="${t.id}" data-group="${esc(t.group)}"${t.group === menuGroup ? "" : " hidden"}>${esc(t.short || t.name)}${CHECK}</a>`).join("") +
+    SPECIALS.map(x => `<a href="#${x.id}" data-special="${x.id}" data-group="${SPECIAL_GROUP}"${menuGroup === SPECIAL_GROUP ? "" : " hidden"}>${esc(x.name)}${CHECK}</a>`).join("");
   if (T) syncTopicLinks();
 }
 function showMenuGroup(g) {
   menuGroup = g;
   $("#menuTabs").querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", b.dataset.group === g));
-  $("#topicList").querySelectorAll("a").forEach(a => { a.hidden = TOPIC[a.dataset.topic].group !== g; });
+  $("#topicList").querySelectorAll("a").forEach(a => { a.hidden = a.dataset.group !== g; });
 }
 $("#menuTabs").addEventListener("click", e => { const b = e.target.closest("[data-group]"); if (b) showMenuGroup(b.dataset.group); });
-renderTopicMenu();
 
 function syncTopicLinks() {
   document.querySelectorAll("#topicList a").forEach(a => {
+    if (a.dataset.special) { if (a.dataset.special === special) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current"); return; }
     const t = TOPIC[a.dataset.topic];
     a.href = `#${t.id}-${t.modes.includes(state.view) ? state.view : "practice"}`;
-    if (T && t.id === T.def.id) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
+    if (T && !special && t.id === T.def.id) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
   });
 }
 function renderSettings() {
@@ -415,12 +420,16 @@ $("#resetBtn").addEventListener("click", e => {
 });
 
 function updateMeter() {
+  if (special) return specialMeter();
+  $("#meterFill").parentElement.hidden = false;
   if (T.def.kind === "compare") {
     const best = T.prog.best.streak || 0;
     $("#meterText").innerHTML = `Best streak <b>${best}</b>`;
     $("#meterFill").style.width = Math.min(100, best * 5) + "%";
     return;
   }
+  const all = T.items.filter(kindOk).length;
+  if (T.prog.n !== all) { T.prog.n = all; saveProgress(); } // shown on the stats page
   const P = pool(); let m = 0;
   P.forEach(it => { if (status(it.id) === "mastered") m++; });
   $("#meterText").innerHTML = `<b>${m}</b> of ${P.length} ${esc(T.def.unit)} learned`;
@@ -1088,7 +1097,225 @@ const browse = (() => {
 })();
 
 /* ---------- routing ---------- */
-const VIEWS = { practice, quiz, "name-all": nameAll, browse };
+/* ---------- DAILY CHALLENGE, REVIEW, STATS (#daily, #review, #stats) ----------
+   These pages mix questions from many topics: T is swapped to each question's topic while it's on screen,
+   so answers count toward that topic's progress. Going back to a topic rebuilds it. */
+let special = null, leftTopic = false, specialCtl = null;
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const hashStr = s => { let h = 2166136261; for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };
+function seeded(a) { return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+async function prepTopics(defs, prefFor) {
+  await Promise.all([...new Set(defs.map(d => d.set))].map(loadSet));
+  await Promise.all([...new Set(defs.filter(needsMap).map(d => d.set))].map(loadMap));
+  const out = {};
+  defs.forEach(def => { const t = buildTopic(def); t.pref = { ...t.pref, ...prefFor(def) }; out[def.id] = t; });
+  return out;
+}
+const sHost = () => $("#view-special");
+const qTop = (i, n, name, t0) => `<div class="qtop"><span>${i + 1} / ${n} · ${esc(name)}</span><span class="qtrack"><span style="width:${100 * i / n}%"></span></span><span id="qTime">${t0 ? fmtTime((Date.now() - t0) / 1000) : ""}</span></div>`;
+function answerText(def, q) {
+  const it = q.it;
+  if (q.compare) return `${it.label} ${def.verb} than ${(q.a.id === it.id ? q.b : q.a).label}`;
+  if (def.kind === "fact") return `${it.label}: ${it.ans}`;
+  if (def.kind === "text") return `${it.q} → ${it.ans}`;
+  if (def.kind === "neighbors") return `${it.label} borders ${listJoin(it.nb.map(nameOf).slice(0, 3))}${it.nb.length > 3 ? "…" : ""}`;
+  return it.ans;
+}
+// Runs a list of {t, q} questions; calls done(results) at the end
+function runMixed(list, { onDone, label }) {
+  const t0 = Date.now(), marks = [];
+  let i = 0, timer = setInterval(() => { const el = $("#qTime"); if (el) el.textContent = fmtTime((Date.now() - t0) / 1000); }, 500);
+  const ask = () => {
+    if (special !== label) { clearInterval(timer); return; }
+    if (i >= list.length) { clearInterval(timer); specialCtl = null; return onDone({ marks, secs: (Date.now() - t0) / 1000 }); }
+    const { t, q } = list[i]; T = t;
+    specialCtl = renderQuestion(sHost(), q, {
+      top: qTop(i, list.length, t.def.name, t0), below: `${marks.filter(Boolean).length} correct so far`,
+      nextLabel: i === list.length - 1 ? "See results" : "Next",
+      onAnswer(ok) { if (!q.compare) grade(q.it.id, ok); marks.push(ok); sHost().querySelector(".qtrack span").style.width = (100 * (i + 1) / list.length) + "%"; },
+      onNext() { i++; ask(); }
+    });
+  };
+  ask();
+}
+const resultList = (list, marks) => `<ol class="mix-list">${list.map(({ t, q }, i) => `<li class="${marks[i] ? "ok" : "bad"}"><span>${esc(t.def.name)}</span><b>${esc(answerText(t.def, q))}</b></li>`).join("")}</ol>`;
+const loadingCard = txt => `<div class="setup"><p>${esc(txt)}</p></div>`;
+
+/* Daily: the same 10 questions for everyone, from 10 different topics */
+const DAILY_POOL = ["flags", "capitals", "capitals-rev", "map", "shapes", "neighbors", "currencies", "languages", "area", "population",
+  "lakes", "rivers", "ranges", "state-flags", "state-capitals", "state-map", "ca-capitals", "au-capitals", "de-flags", "mx-map"];
+const DKEY = "geography-gym-daily";
+const dailyLog = () => { try { return JSON.parse(localStorage.getItem(DKEY)) || {}; } catch (e) { return {}; } };
+function dailyStreak(log = dailyLog()) {
+  const d = new Date(); if (!log[ymd(d)]) d.setDate(d.getDate() - 1);
+  let n = 0; while (log[ymd(d)]) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+const niceDay = day => new Date(day + "T12:00:00").toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+async function dailyQuestions(day) {
+  const rnd = seeded(hashStr("geography-gym-" + day));
+  const ids = DAILY_POOL.slice();
+  for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
+  const defs = ids.slice(0, 10).map(id => TOPIC[id]);
+  const topics = await prepTopics(defs, def => ({ style: def.styles[0], region: "All", terr: !!def.terrOn }));
+  const real = Math.random; Math.random = rnd; // same answer choices for everyone
+  try {
+    return defs.map(def => {
+      T = topics[def.id];
+      const P = pool().sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+      if (def.kind === "compare") { const a = pick(P); return { t: T, q: makeCompare(a, compareOpponent(a, P)) }; }
+      return { t: T, q: makeQuestion(pick(P), T.pref.style) };
+    });
+  } finally { Math.random = real; }
+}
+function shareText(day, r) {
+  const d = new Date(day + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `Geography Gym daily · ${d}\n${r.s}/${r.n} in ${fmtTime(r.t)}\n${r.m.split("").map(c => c === "1" ? "🟩" : "🟥").join("")}\n${location.origin}/#daily`;
+}
+async function copyText(text, btn) {
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch (e2) {} ta.remove(); }
+  btn.textContent = "Copied"; setTimeout(() => { btn.textContent = "Copy result"; }, 1800);
+}
+const daily = {
+  show() {
+    const day = ymd(new Date()), log = dailyLog(), done = log[day];
+    const streak = dailyStreak(log);
+    if (done) return daily.results(day, done, null);
+    sHost().innerHTML = `<div class="setup">
+      <div><h1>Daily challenge</h1><p>${esc(niceDay(day))}</p></div>
+      <p>10 questions from 10 different topics. Everyone gets the same ones today, and a new set comes out at midnight.</p>
+      ${streak ? `<p><b>${streak}-day streak.</b> Play today to keep it going.</p>` : ""}
+      <button class="btn primary" type="button" id="dStart">Start</button>
+    </div>`;
+    $("#dStart").addEventListener("click", async () => {
+      sHost().innerHTML = loadingCard("Loading today's questions…");
+      let list; try { list = await dailyQuestions(day); } catch (e) { sHost().innerHTML = loadingCard("Today's questions didn't load. Refresh the page to try again."); return; }
+      if (special !== "daily") return;
+      runMixed(list, { label: "daily", onDone({ marks, secs }) {
+        const r = { s: marks.filter(Boolean).length, n: marks.length, m: marks.map(x => x ? 1 : 0).join(""), t: Math.round(secs) };
+        const lg = dailyLog(); lg[day] = r; try { localStorage.setItem(DKEY, JSON.stringify(lg)); } catch (e) {}
+        daily.results(day, r, list);
+      } });
+    });
+  },
+  results(day, r, list) {
+    specialMeter();
+    const streak = dailyStreak();
+    sHost().innerHTML = `<div class="setup">
+      <div><h1>Daily challenge</h1><p>${esc(niceDay(day))}</p></div>
+      <div class="score">${r.s}<small> / ${r.n}</small></div>
+      <div class="marks" aria-label="${r.s} right, ${r.n - r.s} wrong">${r.m.split("").map(c => `<span class="${c === "1" ? "ok" : "bad"}"></span>`).join("")}</div>
+      <p>${fmtTime(r.t)}${streak ? ` · ${streak}-day streak` : ""}. A new challenge comes out at midnight.</p>
+      <button class="btn primary" type="button" id="dCopy">Copy result</button>
+    </div>${list ? resultList(list, r.m.split("").map(c => c === "1")) : ""}`;
+    $("#dCopy").addEventListener("click", e => copyText(shareText(day, r), e.currentTarget));
+  }
+};
+
+/* Review: everything you got wrong recently, across all topics */
+function weakSpots() {
+  const out = [];
+  TOPICS.forEach(def => {
+    if (def.kind === "compare") return;
+    Object.entries(loadProgress(def.id).p).forEach(([id, r]) => { if (r.s && r.b < 2) out.push({ def, id, t: r.t || 0 }); });
+  });
+  return out.sort((a, b) => b.t - a.t);
+}
+const review = {
+  show() {
+    const W = weakSpots();
+    specialMeter();
+    if (!W.length) {
+      sHost().innerHTML = `<div class="setup"><div><h1>Review weak spots</h1><p>Nothing to review right now.</p></div>
+        <p>Anything you get wrong, in any topic, shows up here until you get it right twice.</p>
+        <a class="btn primary" href="#${esc(settings.topic)}-practice">Go practice</a></div>`;
+      return;
+    }
+    const by = {}; W.forEach(w => (by[w.def.id] = by[w.def.id] || { def: w.def, n: 0 }).n++);
+    const n = Math.min(20, W.length);
+    sHost().innerHTML = `<div class="setup">
+      <div><h1>Review weak spots</h1><p>${W.length} ${W.length === 1 ? "thing" : "things"} you got wrong, in ${Object.keys(by).length} ${Object.keys(by).length === 1 ? "topic" : "topics"}</p></div>
+      <ul class="weak-list">${Object.values(by).sort((a, b) => b.n - a.n).map(x => `<li><span>${esc(x.def.name)}</span><b>${x.n}</b></li>`).join("")}</ul>
+      <button class="btn primary" type="button" id="rStart">Review ${n === W.length ? "them" : `the latest ${n}`}</button>
+    </div>`;
+    $("#rStart").addEventListener("click", async () => {
+      sHost().innerHTML = loadingCard("Loading…");
+      const pickd = shuffle(W.slice(0, n));
+      let topics; try { topics = await prepTopics([...new Set(pickd.map(w => w.def))], def => ({ region: "All", terr: true })); }
+      catch (e) { sHost().innerHTML = loadingCard("This didn't load. Refresh the page to try again."); return; }
+      if (special !== "review") return;
+      const list = pickd.map(w => { T = topics[w.def.id]; const it = T.byId[w.id]; return it ? { t: T, q: makeQuestion(it, T.pref.style) } : null; }).filter(Boolean);
+      runMixed(list, { label: "review", onDone({ marks }) {
+        specialMeter();
+        const left = weakSpots().length, s = marks.filter(Boolean).length;
+        sHost().innerHTML = `<div class="setup">
+          <div><h1>Review done</h1><p>${s} of ${marks.length} right. ${left ? `${left} still to review.` : "Nothing left to review."}</p></div>
+          ${left ? `<button class="btn primary" type="button" id="rAgain">Keep going</button>` : `<a class="btn primary" href="#stats">See your stats</a>`}
+        </div>${resultList(list, marks)}`;
+        const a = $("#rAgain"); if (a) a.addEventListener("click", () => review.show());
+      } });
+    });
+  }
+};
+
+/* Stats: progress in every topic you've started */
+const pct = (a, b) => b ? Math.round(100 * a / b) : 0;
+const stats = {
+  show() {
+    specialMeter();
+    let learned = 0, answers = 0, right = 0, started = 0;
+    const rows = {};
+    TOPICS.forEach(def => {
+      const pr = loadProgress(def.id), recs = Object.values(pr.p);
+      if (def.kind === "compare") {
+        if (pr.best.streak) { started++; (rows[def.group] = rows[def.group] || []).push(`<a class="stat-row" href="#${def.id}-practice"><span class="nm">${esc(def.name)}</span><span class="sbar"><span style="width:${Math.min(100, pr.best.streak * 5)}%"></span></span><span class="num">Best streak ${pr.best.streak}</span><span class="acc"></span></a>`); }
+        return;
+      }
+      if (!recs.some(r => r.s)) return;
+      started++;
+      const l = recs.filter(r => r.s && r.b >= 3).length, s = recs.reduce((a, r) => a + (r.s || 0), 0), ok = recs.reduce((a, r) => a + (r.r || 0), 0);
+      const total = Math.max(pr.n || 0, l);
+      learned += l; answers += s; right += ok;
+      (rows[def.group] = rows[def.group] || []).push(`<a class="stat-row" href="#${def.id}-practice"><span class="nm">${esc(def.name)}</span><span class="sbar"><span style="width:${pct(l, total)}%"></span></span><span class="num">${l}${total ? ` / ${total}` : ""} learned</span><span class="acc">${pct(ok, s)}% right</span></a>`);
+    });
+    const log = dailyLog(), days = Object.values(log);
+    const tile = (v, k) => `<div class="tile-stat"><b>${v}</b><span>${k}</span></div>`;
+    sHost().innerHTML = `<div class="stats">
+      <h1>Your stats</h1>
+      <div class="tiles-row">${tile(learned, "learned")}${tile(answers, "answers")}${tile(answers ? pct(right, answers) + "%" : "–", "right")}${tile(dailyStreak(log), "day streak")}</div>
+      ${days.length ? `<p class="muted">${days.length} daily ${days.length === 1 ? "challenge" : "challenges"} played, ${(days.reduce((a, d) => a + d.s, 0) / days.length).toFixed(1)} right on average.</p>` : ""}
+      ${started ? GROUP_NAMES.filter(g => rows[g]).map(g => `<h2>${esc(g)}</h2><div class="stat-rows">${rows[g].join("")}</div>`).join("") : `<p class="muted">No progress yet. Pick a topic from the menu and your stats will show up here.</p>`}
+      ${started ? `<p class="muted">${TOPICS.length - started} topics not started yet. Everything is saved in this browser.</p>` : ""}
+    </div>`;
+  }
+};
+const SPECIALS = [
+  { id: "daily", name: "Daily challenge", view: daily },
+  { id: "review", name: "Review weak spots", view: review },
+  { id: "stats", name: "Your stats", view: stats }
+];
+const SPECIAL_GROUP = "Daily & stats";
+function specialMeter() {
+  const set = (html, w) => { $("#meterText").innerHTML = html; $("#meterFill").parentElement.hidden = w == null; $("#meterFill").style.width = (w || 0) + "%"; };
+  if (special === "daily") { const s = dailyStreak(); set(s ? `<b>${s}</b>-day streak` : "No streak yet", Math.min(100, s * 100 / 7)); }
+  else if (special === "review") { const n = weakSpots().length; set(`<b>${n}</b> to review`, null); }
+  else set(`<b>${TOPICS.reduce((a, d) => a + Object.values(loadProgress(d.id).p).filter(r => r.s && r.b >= 3).length, 0)}</b> learned in all`, null);
+}
+function showSpecial(sp) {
+  ++routeToken; special = sp.id; leftTopic = true; specialCtl = null;
+  document.body.classList.add("special");
+  document.querySelectorAll(".view").forEach(s => s.hidden = s.id !== "view-special");
+  $("#view-special").classList.toggle("wide", sp.id === "stats");
+  $("#loading").hidden = true;
+  $("#menuLabel").textContent = sp.name;
+  document.title = `${sp.name} · Geography Gym`;
+  state.view = "special";
+  syncTopicLinks(); specialMeter();
+  sp.view.show();
+}
+
+const VIEWS = { practice, quiz, "name-all": nameAll, browse, special: { show() {}, key(e) { specialCtl && specialCtl.key(e); } } };
 const state = { view: "practice" };
 function parseHash() {
   const h = location.hash.slice(1);
@@ -1111,11 +1338,15 @@ function loadSet(name) {
 const needsMap = def => def.kind === "shape" || def.kind === "locate" || def.kind === "feature";
 let routeToken = 0;
 async function route() {
+  const sp = SPECIALS.find(x => x.id === location.hash.slice(1));
+  if (sp) return showSpecial(sp);
+  if (special) { special = null; specialCtl = null; document.body.classList.remove("special"); }
   let { topic, mode } = parseHash();
   const def = TOPIC[topic];
   if (!def.modes.includes(mode)) { location.replace(`#${topic}-practice`); return; }
   const token = ++routeToken;
-  if (!T || T.def.id !== topic) {
+  if (!T || T.def.id !== topic || leftTopic) {
+    leftTopic = false;
     document.querySelectorAll(".view").forEach(s => s.hidden = true);
     $("#loading").hidden = false; $("#loading").textContent = "Loading…";
     try { await loadSet(def.set); if (needsMap(def)) await loadMap(def.set); }
@@ -1136,6 +1367,7 @@ async function route() {
   document.title = `${T.def.name} · Geography Gym`;
   VIEWS[mode].show();
 }
+renderTopicMenu();
 addEventListener("hashchange", route);
-document.addEventListener("keydown", e => { if (T) { const v = VIEWS[state.view]; if (v) v.key(e); } });
+document.addEventListener("keydown", e => { const v = VIEWS[state.view]; if (v && (T || state.view === "special")) v.key(e); });
 route();
