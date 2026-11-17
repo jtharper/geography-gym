@@ -4,12 +4,12 @@ A browser game for learning every country flag. It's a plain static site with no
 
 ## Modes
 
-- **Practice**: endless spaced repetition. Flags you miss come back sooner, and a flag counts as mastered after 3 correct answers in a row.
-- **Quiz**: a timed round of 10, 20, 50 or all flags, scored with stars, with a retry for the ones you missed.
+- **Practice**: endless spaced repetition. Flags you miss come back sooner, and a flag counts as learned after 3 correct answers in a row.
+- **Quiz**: a timed round of 10, 20, 50 or all flags, with a retry for the ones you missed.
 - **Name them all**: type every country you can think of, and each flag is revealed as you name it. The clock is running.
-- **Study**: a gallery you can search, plus a "Spot the difference" section for look-alike flags.
+- **Browse flags**: a gallery you can search, plus a look-alikes section for flags that are easy to mix up.
 
-Progress, points and levels are saved in the browser's `localStorage`.
+Every mode and setting (region, territories, answer style, sounds) is in the one menu at the top right. There's also a light/dark toggle. Progress and settings are saved in the browser's `localStorage`.
 
 ## Project layout
 
@@ -56,4 +56,4 @@ Every push to `main` deploys automatically. Pushes to other branches get their o
 
 ## Credits
 
-Flag artwork: [flag-icons](https://github.com/lipis/flag-icons) (MIT). Country data: [world-countries](https://github.com/mledoze/countries) (ODbL).
+Font: [Manrope](https://github.com/sharanda/manrope) (OFL). Flag artwork: [flag-icons](https://github.com/lipis/flag-icons) (MIT). Country data: [world-countries](https://github.com/mledoze/countries) (ODbL).
