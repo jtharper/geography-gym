@@ -18,6 +18,9 @@
   --bad-bg: #fdecec;
   --flag-shadow: 0 1px 2px rgba(20, 23, 28, .08), 0 16px 40px -12px rgba(20, 23, 28, .25);
   --pop-shadow: 0 12px 40px -8px rgba(20, 23, 28, .22);
+  --map-sea: #e8edf3;
+  --map-land: #d3d9e1;
+  --map-border: #f6f7f9;
   --font: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
   color-scheme: light;
 }
@@ -35,6 +38,9 @@
   --bad-bg: #2d1717;
   --flag-shadow: 0 0 0 1px rgba(255, 255, 255, .06), 0 24px 60px -16px rgba(0, 0, 0, .8);
   --pop-shadow: 0 12px 40px -8px rgba(0, 0, 0, .7);
+  --map-sea: #151a22;
+  --map-land: #2b313b;
+  --map-border: #0f1115;
   color-scheme: dark;
 }
 
@@ -161,6 +167,19 @@ main { flex: 1; display: flex; flex-direction: column; align-items: center; padd
 .minis figure { margin: 0; width: 70px; font-size: 12px; font-weight: 700; color: var(--ink); line-height: 1.25; }
 .minis figcaption { margin-top: 4px; }
 .minis .flag { border-radius: 4px; }
+.map { position: relative; width: 100%; aspect-ratio: 5 / 2; margin: 2px 0 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--map-sea); }
+.map-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.map-svg path { fill: var(--map-land); stroke: var(--map-border); stroke-width: .6px; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.map-svg path.hit { fill: var(--accent); }
+.map-svg path.miss { fill: var(--bad); opacity: .55; }
+.map-svg .ring { fill: none; stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.map-svg .ring.hit { stroke: var(--accent); }
+.map-svg .ring.miss { stroke: var(--bad); }
+.map-key { position: absolute; left: 10px; bottom: 8px; z-index: 1; display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; font-weight: 700; color: var(--ink); }
+.map-key span { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border-radius: 99px; padding: 3px 9px 3px 7px; box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.k { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.k.hit { background: var(--accent); }
+.k.miss { background: var(--bad); opacity: .7; }
 .kbd-hint { font-size: 13px; color: var(--muted); }
 .kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; font-size: 12px; font-weight: 700; }
 

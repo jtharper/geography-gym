@@ -21,8 +21,8 @@ const TOPICS = [
 const TOPIC = Object.fromEntries(TOPICS.map(t => [t.id, t]));
 const MODES = ["practice", "quiz", "name-all", "browse"];
 const SETS = {
-  countries: { data: "data/countries.json", images: "data/flags.json", rows: null, img: {}, loading: null },
-  states: { data: "data/states.json", images: "data/state-flags.json", rows: null, img: {}, loading: null }
+  countries: { data: "data/countries.json", images: "data/flags.json", map: "data/world-map.json", rows: null, img: {}, loading: null },
+  states: { data: "data/states.json", images: "data/state-flags.json", map: "data/us-map.json", rows: null, img: {}, loading: null }
 };
 
 /* ---------- country flag look-alikes ---------- */
@@ -268,6 +268,85 @@ function updateMeter() {
   $("#meterFill").style.width = (100 * m / Math.max(1, P.length)) + "%";
 }
 
+/* ---------- answer map ---------- */
+const MAPS = {}; // set name -> { data, svg, hits: [], rings: [], loading }
+const SVGNS = "http://www.w3.org/2000/svg";
+function loadMap(setName) {
+  const m = MAPS[setName] || (MAPS[setName] = { data: null, svg: null, hits: [], loading: null });
+  if (!m.loading) m.loading = fetch(SETS[setName].map).then(r => { if (!r.ok) throw new Error("map"); return r.json(); }).then(data => {
+    m.data = data;
+    const svg = document.createElementNS(SVGNS, "svg");
+    svg.setAttribute("class", "map-svg");
+    svg.setAttribute("viewBox", data.vb.join(" "));
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    svg.setAttribute("aria-hidden", "true");
+    const g = document.createElementNS(SVGNS, "g");
+    m.byCode = {};
+    for (const sh of data.shapes) {
+      const path = document.createElementNS(SVGNS, "path");
+      path.setAttribute("d", sh.d);
+      if (sh.c) (m.byCode[sh.c] = m.byCode[sh.c] || []).push(path);
+      g.appendChild(path);
+    }
+    svg.appendChild(g);
+    m.rings = ["ring hit", "ring miss"].map(cls => { const c = document.createElementNS(SVGNS, "circle"); c.setAttribute("class", cls); c.style.display = "none"; svg.appendChild(c); return c; });
+    m.svg = svg;
+    return m;
+  }).catch(e => { m.loading = null; throw e; });
+  return m.loading;
+}
+// Pick a view that shows the answer (and the wrong pick, if any) with some context around it.
+function frameFor(data, ids, aspect) {
+  const boxes = ids.map(id => data.info[id]).filter(Boolean).map(i => i.b);
+  if (!boxes.length) return data.vb.slice();
+  let x0 = Math.min(...boxes.map(b => b[0])), y0 = Math.min(...boxes.map(b => b[1]));
+  let x1 = Math.max(...boxes.map(b => b[2])), y1 = Math.max(...boxes.map(b => b[3]));
+  const [vx, vy, vw, vh] = data.vb;
+  let w = (x1 - x0) * 1.8, h = (y1 - y0) * 1.8;
+  const minW = vw * (data.vb[2] === 1000 ? 0.16 : 0.32);
+  w = Math.max(w, minW); h = Math.max(h, minW / aspect);
+  if (w / h < aspect) w = h * aspect; else h = w / aspect;
+  if (w > vw) { w = vw; h = w / aspect; }
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  let x = cx - w / 2, y = cy - h / 2;
+  x = Math.min(Math.max(x, vx), vx + vw - w);
+  y = Math.min(Math.max(y, vy - h * 0.1), vy + vh - h * 0.9);
+  return [x, y, w, h];
+}
+async function showMap(container, targetId, pickedId) {
+  const setName = T.def.set;
+  let m;
+  try { m = await loadMap(setName); } catch (e) { container.remove(); return; }
+  if (!container.isConnected) return;
+  const { data, svg } = m;
+  m.hits.forEach(p => p.classList.remove("hit", "miss")); m.hits = [];
+  const mark = (id, cls) => (m.byCode[id] || []).forEach(p => { p.classList.add(cls); m.hits.push(p); p.parentNode.appendChild(p); });
+  if (pickedId) mark(pickedId, "miss");
+  mark(targetId, "hit");
+  container.appendChild(svg);
+  const aspect = container.clientWidth / Math.max(1, container.clientHeight) || 2.5;
+  const ids = pickedId ? [targetId, pickedId] : [targetId];
+  const to = frameFor(data, ids, aspect);
+  // Small places (islands, microstates) get a ring so they can be spotted.
+  [[targetId, 0], [pickedId, 1]].forEach(([id, i]) => {
+    const ring = m.rings[i], info = id && data.info[id];
+    const b = info && info.b, small = b && (b[2] - b[0] < to[2] * 0.04 && b[3] - b[1] < to[3] * 0.04);
+    ring.style.display = small ? "" : "none";
+    if (small) { ring.setAttribute("cx", info.p[0]); ring.setAttribute("cy", info.p[1]); ring.setAttribute("r", to[2] * 0.035); svg.appendChild(ring); }
+  });
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const from = [to[0] - to[2], to[1] - to[3], to[2] * 3, to[3] * 3];
+  if (reduce) { svg.setAttribute("viewBox", to.join(" ")); return; }
+  const t0 = performance.now(), dur = 650;
+  const step = now => {
+    if (!container.isConnected) return;
+    const t = Math.min(1, (now - t0) / dur), e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    svg.setAttribute("viewBox", from.map((v, i) => v + (to[i] - v) * e).join(" "));
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
 /* ---------- question engine ---------- */
 function distractors(target, n) {
   const ex = new Set([target.id]); if (T.def.id === "flags" && TWINS[target.id]) ex.add(TWINS[target.id]);
@@ -334,6 +413,7 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
     r += `<div class="result-sub">${esc(it.fact)}${it.k === "territory" ? " · Territory" : ""}</div>`;
     if (note) r += `<div class="result-sub">${esc(note)}</div>`;
     if (!ok && p && def.kind === "capital") r += `<div class="result-sub">${esc(p.ans)} is the capital of ${esc(p.label)}.</div>`;
+    r += `<figure class="map" data-map><figcaption class="map-key">${p ? `<span><i class="k hit"></i>${esc(it.label)}</span><span><i class="k miss"></i>${esc(p.label)} (your pick)</span>` : `<span><i class="k hit"></i>${esc(it.label)}</span>`}</figcaption></figure>`;
     if (!ok && def.kind === "flag") {
       const gs = def.groups ? (groupsOf[it.id] || []) : [];
       const g = (p && gs.find(x => x.codes.includes(p.id))) || gs[0];
@@ -342,6 +422,7 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
     }
     r += `<button type="button" class="btn primary" data-next>${nextLabel}</button><span class="kbd-hint">or press <span class="kbd">Enter</span></span></div>`;
     belowEl.outerHTML = r;
+    showMap(host.querySelector("[data-map]"), it.id, p ? p.id : null);
     onAnswer(ok, picked);
     const nb = host.querySelector("[data-next]");
     nb.addEventListener("click", onNext);
@@ -625,6 +706,7 @@ async function route() {
     state.view = mode;
     renderSettings(); updateMeter();
     practice.reset(); quiz.reset(); nameAll.reset();
+    setTimeout(() => loadMap(TOPIC[topic].set).catch(() => {}), 1200);
   }
   $("#loading").hidden = true;
   state.view = mode;

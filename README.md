@@ -9,6 +9,8 @@ Browser geography quizzes. Country flags come first, with more topics (capitals,
 - **US state flags**: all 50, current as of 2026, including Minnesota's and Utah's 2024 flags and Mississippi's 2021 flag.
 - **US state capitals**: all 50, grouped by Census region (Northeast, Midwest, South, West).
 
+After every answer, a map zooms to the place, highlighted in blue. A wrong pick is also shown, in red. Tiny places get a ring so they're easy to spot. Borders follow international recognition: Crimea is shown as part of Ukraine, Somaliland as part of Somalia, and Northern Cyprus as part of Cyprus.
+
 Each topic keeps its own progress. To add a topic, add an entry to `TOPICS` at the top of `app.js`. If it needs new data, add it to `scripts/build-data.mjs`.
 
 ## Modes (every topic)
@@ -30,6 +32,7 @@ public/              ← the deployed site
   data/countries.json
   data/flags.json    ← optimized SVG for each country flag
   data/states.json, data/state-flags.json
+  data/world-map.json, data/us-map.json  ← pre-projected map shapes for the answer map
   _headers           ← Cloudflare Pages cache rules
 scripts/build-data.mjs  ← regenerates public/data/*
 ```
@@ -66,4 +69,4 @@ Every push to `main` deploys automatically. Pushes to other branches get their o
 
 ## Credits
 
-Font: [Manrope](https://github.com/sharanda/manrope) (OFL). Flag artwork: [flag-icons](https://github.com/lipis/flag-icons) (MIT). Country data: [world-countries](https://github.com/mledoze/countries) (ODbL). State flags: [region-flags](https://github.com/fonttools/region-flags) (public domain, from Wikimedia Commons), with Minnesota, Utah and Mississippi from [us-state-flags](https://www.npmjs.com/package/us-state-flags) (ISC).
+Font: [Manrope](https://github.com/sharanda/manrope) (OFL). Flag artwork: [flag-icons](https://github.com/lipis/flag-icons) (MIT). Country data: [world-countries](https://github.com/mledoze/countries) (ODbL). State flags: [region-flags](https://github.com/fonttools/region-flags) (public domain, from Wikimedia Commons), with Minnesota, Utah and Mississippi from [us-state-flags](https://www.npmjs.com/package/us-state-flags) (ISC). Maps: [world-atlas](https://github.com/topojson/world-atlas) (Natural Earth, public domain) and [us-atlas](https://github.com/topojson/us-atlas) (US Census Bureau, public domain).

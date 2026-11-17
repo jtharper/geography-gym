@@ -97,3 +97,77 @@ for (const [code, n, cap, r] of STATES) {
 fs.writeFileSync('public/data/states.json', JSON.stringify(states));
 writeImages('public/data/state-flags.json', stateFlags);
 console.log(states.length, 'states');
+
+/* ---------------- Maps (answer feedback) ---------------- */
+const topo = require('topojson-client');
+const { geoNaturalEarth1, geoPath, geoContains } = await import('d3-geo');
+const r1 = n => Math.round(n * 10) / 10;
+const box = b => [r1(b[0][0]), r1(b[0][1]), r1(b[1][0]), r1(b[1][1])];
+// Main-polygon bounds and center for zooming (ignores far-flung islands and antimeridian wrap)
+function mainInfo(path, geom) {
+  const polys = geom.type === 'MultiPolygon' ? geom.coordinates.map(c => ({ type: 'Polygon', coordinates: c })) : [geom];
+  let best = null, bestA = -1;
+  for (const p of polys) { const a = path.area(p); if (a > bestA) { bestA = a; best = p; } }
+  const c = path.centroid(best);
+  return { b: box(path.bounds(best)), p: [r1(c[0]), r1(c[1])], a: bestA };
+}
+
+// World
+const world = require('world-atlas/countries-50m.json');
+const wfc = topo.feature(world, world.objects.countries);
+const ccnTo2 = {}; all.forEach(c => { if (c.ccn3) ccnTo2[c.ccn3] = c.cca2; });
+const nameTo2 = { 'Kosovo': 'XK', 'Somaliland': 'SO', 'N. Cyprus': 'CY' }; // recognized-border assignments
+const ourCodes = new Set(countries.map(c => c.c));
+const W = 1000;
+const proj = geoNaturalEarth1().fitWidth(W, { type: 'Sphere' });
+const wpath = geoPath(proj).digits(1);
+const wshapes = [], winfo = {};
+const addInfo = (code, geom, path) => {
+  const m = mainInfo(path, geom);
+  if (!winfo[code] || m.a > winfo[code].a) winfo[code] = m;
+};
+for (const f of wfc.features) {
+  if (f.id === '010') continue; // Antarctica
+  let code = ccnTo2[f.id] || nameTo2[f.properties.name] || null;
+  if (code && !ourCodes.has(code)) code = null;
+  let geom = f.geometry;
+  if (code === 'RU' && geom.type === 'MultiPolygon') {
+    // Crimea: drawn as part of Ukraine, per its internationally recognized border
+    const isCrimea = c => geoContains({ type: 'Polygon', coordinates: c }, [34.1, 44.95]);
+    const crimea = geom.coordinates.filter(isCrimea);
+    if (crimea.length) {
+      geom = { type: 'MultiPolygon', coordinates: geom.coordinates.filter(c => !isCrimea(c)) };
+      const cg = { type: 'MultiPolygon', coordinates: crimea };
+      wshapes.push({ c: 'UA', d: wpath(cg) });
+    }
+  }
+  wshapes.push({ c: code, d: wpath(geom) });
+  if (code) addInfo(code, geom, wpath);
+}
+const allB = wfc.features.filter(f => f.id !== '010').map(f => wpath.bounds(f));
+const wy0 = Math.min(...allB.map(b => b[0][1])), wy1 = Math.max(...allB.map(b => b[1][1]));
+// Too small for the 50m data (e.g. Tuvalu, Gibraltar): a marker at the country's coordinates
+const wmarkers = {};
+for (const c of all) {
+  if (!ourCodes.has(c.cca2) || winfo[c.cca2] || !c.latlng) continue;
+  const p = proj([c.latlng[1], c.latlng[0]]);
+  wmarkers[c.cca2] = 1;
+  winfo[c.cca2] = { b: [r1(p[0]), r1(p[1]), r1(p[0]), r1(p[1])], p: [r1(p[0]), r1(p[1])], a: 0 };
+}
+for (const k in winfo) delete winfo[k].a;
+fs.writeFileSync('public/data/world-map.json', JSON.stringify({ vb: [0, r1(wy0), W, r1(wy1 - wy0)], shapes: wshapes, info: winfo, markers: Object.keys(wmarkers) }));
+console.log('world map:', wshapes.length, 'shapes,', Object.keys(winfo).length, 'located,', Object.keys(wmarkers).length, 'as markers;', countries.filter(c => !winfo[c.c]).map(c => c.c).join(' ') || 'none missing');
+
+// US states (already projected: Albers USA, Alaska and Hawaii inset)
+const us = require('us-atlas/states-albers-10m.json');
+const ufc = topo.feature(us, us.objects.states);
+const upath = geoPath(null).digits(1);
+const nameToState = Object.fromEntries(STATES.map(([code, n]) => [n, code]));
+const ushapes = [], uinfo = {};
+for (const f of ufc.features) {
+  const code = nameToState[f.properties.name] || null;
+  ushapes.push({ c: code, d: upath(f.geometry) });
+  if (code) { const m = mainInfo(upath, f.geometry); delete m.a; uinfo[code] = m; }
+}
+fs.writeFileSync('public/data/us-map.json', JSON.stringify({ vb: [0, 0, 975, 610], shapes: ushapes, info: uinfo, markers: [] }));
+console.log('us map:', ushapes.length, 'shapes,', Object.keys(uinfo).length, 'states located');
