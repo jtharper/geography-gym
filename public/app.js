@@ -296,13 +296,13 @@ function loadMap(setName) {
   return m.loading;
 }
 // Pick a view that shows the answer (and the wrong pick, if any) with some context around it.
-function frameFor(data, ids, aspect) {
+function frameFor(data, ids, aspect, padK = 1.8) {
   const boxes = ids.map(id => data.info[id]).filter(Boolean).map(i => i.b);
   if (!boxes.length) return data.vb.slice();
   let x0 = Math.min(...boxes.map(b => b[0])), y0 = Math.min(...boxes.map(b => b[1]));
   let x1 = Math.max(...boxes.map(b => b[2])), y1 = Math.max(...boxes.map(b => b[3]));
   const [vx, vy, vw, vh] = data.vb;
-  let w = (x1 - x0) * 1.8, h = (y1 - y0) * 1.8;
+  let w = (x1 - x0) * padK, h = (y1 - y0) * padK;
   const minW = vw * (data.vb[2] === 1000 ? 0.16 : 0.32);
   w = Math.max(w, minW); h = Math.max(h, minW / aspect);
   if (w / h < aspect) w = h * aspect; else h = w / aspect;
@@ -320,10 +320,19 @@ async function showMap(container, targetId, pickedId) {
   if (!container.isConnected) return;
   const { data, svg } = m;
   m.hits.forEach(p => p.classList.remove("hit", "miss")); m.hits = [];
+  if (!targetId) {
+    m.rings.forEach(r => r.style.display = "none");
+    container.insertBefore(svg, container.firstChild);
+    // Frame the selected region; skip giants like Russia that would zoom the view all the way out
+    const region = T.pref.region === "All" ? null : pool().map(it => it.id).filter(id => { const b = data.info[id] && data.info[id].b; return b && b[2] - b[0] < data.vb[2] * 0.3; });
+    const aspect = container.clientWidth / Math.max(1, container.clientHeight) || 2;
+    svg.setAttribute("viewBox", (region ? frameFor(data, region, aspect, 1.15) : data.vb).join(" "));
+    return;
+  }
   const mark = (id, cls) => (m.byCode[id] || []).forEach(p => { p.classList.add(cls); m.hits.push(p); p.parentNode.appendChild(p); });
   if (pickedId) mark(pickedId, "miss");
   mark(targetId, "hit");
-  container.appendChild(svg);
+  if (svg.parentNode !== container) { container.insertBefore(svg, container.firstChild); }
   const aspect = container.clientWidth / Math.max(1, container.clientHeight) || 2.5;
   const ids = pickedId ? [targetId, pickedId] : [targetId];
   const to = frameFor(data, ids, aspect);
@@ -335,7 +344,8 @@ async function showMap(container, targetId, pickedId) {
     if (small) { ring.setAttribute("cx", info.p[0]); ring.setAttribute("cy", info.p[1]); ring.setAttribute("r", to[2] * 0.035); svg.appendChild(ring); }
   });
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const from = [to[0] - to[2], to[1] - to[3], to[2] * 3, to[3] * 3];
+  const cur = (svg.getAttribute("viewBox") || "").split(/\s+/).map(Number);
+  const from = cur.length === 4 && cur.every(isFinite) ? cur : [to[0] - to[2], to[1] - to[3], to[2] * 3, to[3] * 3];
   if (reduce) { svg.setAttribute("viewBox", to.join(" ")); return; }
   const t0 = performance.now(), dur = 650;
   const step = now => {
@@ -377,7 +387,7 @@ function makeQuestion(item, style) {
 function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextLabel = "Next" }) {
   const it = q.it, def = T.def;
   let answered = false;
-  let h = top;
+  let h = top + `<div class="q-layout"><div class="q-main">`;
   if (q.style === "reverse") {
     h += `<p class="prompt" style="margin-top:0">${esc(def.find)}</p><div class="qname">${esc(it.ans)}</div>
       <div class="flag-answers">${q.options.map((o, i) => `<button type="button" class="flag-answer" data-id="${o.id}" aria-label="Option ${i + 1}">${img(o.id)}<span class="cap"></span></button>`).join("")}</div>`;
@@ -390,9 +400,11 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
       h += `<form class="type-row" autocomplete="off"><input id="typeIn" type="text" placeholder="${esc(def.typeHolder)}" aria-label="${esc(def.typeHolder)}" autocapitalize="off" spellcheck="false"><button class="btn primary" type="submit">Check</button><button class="btn" type="button" data-skip>Skip</button></form>`;
     }
   }
-  h += `<div class="below">${below}</div>`;
+  h += `<div class="below">${below}</div></div>
+    <aside class="q-side"><figure class="map idle" data-map><figcaption class="map-key"><span>Answer to see it on the map</span></figcaption></figure><div class="fb"></div></aside></div>`;
   host.innerHTML = h;
-  const belowEl = host.querySelector(".below");
+  const belowEl = host.querySelector(".below"), fbEl = host.querySelector(".fb"), mapEl = host.querySelector("[data-map]");
+  showMap(mapEl, null, null);
 
   function finish(ok, picked, note) {
     if (answered) return; answered = true;
@@ -413,16 +425,18 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
     r += `<div class="result-sub">${esc(it.fact)}${it.k === "territory" ? " · Territory" : ""}</div>`;
     if (note) r += `<div class="result-sub">${esc(note)}</div>`;
     if (!ok && p && def.kind === "capital") r += `<div class="result-sub">${esc(p.ans)} is the capital of ${esc(p.label)}.</div>`;
-    r += `<figure class="map" data-map><figcaption class="map-key">${p ? `<span><i class="k hit"></i>${esc(it.label)}</span><span><i class="k miss"></i>${esc(p.label)} (your pick)</span>` : `<span><i class="k hit"></i>${esc(it.label)}</span>`}</figcaption></figure>`;
     if (!ok && def.kind === "flag") {
       const gs = def.groups ? (groupsOf[it.id] || []) : [];
       const g = (p && gs.find(x => x.codes.includes(p.id))) || gs[0];
       if (g) r += `<div class="tip"><b>${esc(g.t)}.</b>${minis(g.codes)}${esc(g.tip)}</div>`;
       else if (p) r += `<div class="tip"><b>Side by side</b>${minis([it.id, p.id])}</div>`;
     }
-    r += `<button type="button" class="btn primary" data-next>${nextLabel}</button><span class="kbd-hint">or press <span class="kbd">Enter</span></span></div>`;
-    belowEl.outerHTML = r;
-    showMap(host.querySelector("[data-map]"), it.id, p ? p.id : null);
+    r += `<div class="next-row"><button type="button" class="btn primary" data-next>${nextLabel}</button><span class="kbd-hint">or press <span class="kbd">Enter</span></span></div></div>`;
+    belowEl.textContent = "";
+    fbEl.innerHTML = r;
+    mapEl.classList.remove("idle");
+    mapEl.querySelector(".map-key").innerHTML = p ? `<span><i class="k hit"></i>${esc(it.label)}</span><span><i class="k miss"></i>${esc(p.label)} (your pick)</span>` : `<span><i class="k hit"></i>${esc(it.label)}</span>`;
+    showMap(mapEl, it.id, p ? p.id : null);
     onAnswer(ok, picked);
     const nb = host.querySelector("[data-next]");
     nb.addEventListener("click", onNext);

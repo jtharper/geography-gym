@@ -56,7 +56,7 @@ svg { flex: none; }
 h1, h2, h3 { margin: 0; line-height: 1.2; text-wrap: balance; }
 
 /* Header */
-.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 48px; flex-wrap: wrap; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 48px; flex-wrap: wrap; }
 .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; letter-spacing: -0.01em; color: var(--ink); text-decoration: none; }
 .logo svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .top-right { display: flex; align-items: center; gap: 12px; }
@@ -115,7 +115,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; text-wrap: balance; }
 .seg.soft button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, .12), 0 0 0 1px var(--line); }
 
 /* Main column */
-main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 20px 48px; }
+main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 32px 16px; }
 .view { width: 100%; max-width: 600px; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .view.wide { max-width: 1100px; justify-content: flex-start; }
 .view[hidden] { display: none; }
@@ -165,9 +165,9 @@ main { flex: 1; display: flex; flex-direction: column; align-items: center; padd
 .tip b { color: var(--ink); }
 .minis { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
 .minis figure { margin: 0; width: 70px; font-size: 12px; font-weight: 700; color: var(--ink); line-height: 1.25; }
-.minis figcaption { margin-top: 4px; }
+.minis figcaption { margin-top: 4px; overflow-wrap: anywhere; }
 .minis .flag { border-radius: 4px; }
-.map { position: relative; width: 100%; aspect-ratio: 5 / 2; margin: 2px 0 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--map-sea); }
+.map { position: relative; width: 100%; aspect-ratio: 16 / 9; margin: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--map-sea); }
 .map-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .map-svg path { fill: var(--map-land); stroke: var(--map-border); stroke-width: .6px; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
 .map-svg path.hit { fill: var(--accent); }
@@ -180,6 +180,38 @@ main { flex: 1; display: flex; flex-direction: column; align-items: center; padd
 .k { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .k.hit { background: var(--accent); }
 .k.miss { background: var(--bad); opacity: .7; }
+/* Question layout: question column + side column (map, feedback). Side by side on wide screens so it all fits one screen. */
+.q-layout { width: 100%; display: grid; gap: 18px; }
+.q-main { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.q-side { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.q-side .result { margin-top: 0; }
+.map-key span:only-child:not(:has(.k)) { color: var(--muted); font-weight: 600; }
+@media (max-width: 999px) {
+  .map.idle { display: none; }
+}
+@media (min-width: 1000px) {
+  #view-practice, #view-quiz { max-width: 1180px; }
+  .q-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; align-items: stretch; }
+  .q-main { justify-content: center; }
+  /* The side column is exactly one screen tall: the map takes whatever room the feedback leaves */
+  .q-side { height: calc(100vh - 160px); min-height: 380px; display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+  #view-quiz .q-side { height: calc(100vh - 210px); }
+  .q-side .map { aspect-ratio: auto; flex: 0 1 auto; height: clamp(180px, 48vh, 460px); min-height: 140px; transition: height .35s ease; }
+  .q-side .map.idle { height: clamp(160px, 30vh, 260px); }
+  .q-side .fb { flex: none; }
+  .q-side .result { justify-items: start; text-align: left; gap: 8px; }
+  .q-side .result-sub { margin-top: -4px; }
+  .q-side .tip { padding: 10px 12px; font-size: 13px; }
+  .q-side .minis { margin: 6px 0; gap: 8px; }
+  .q-side .minis figure { width: 64px; font-size: 11px; }
+  .qflag { width: min(440px, 100%, calc((100vh - 400px) * 4 / 3)); }
+  #view-quiz .qflag { width: min(440px, 100%, calc((100vh - 450px) * 4 / 3)); }
+  .qflag.small { width: min(220px, 60%, calc((100vh - 560px) * 4 / 3)); }
+  .flag-answers { max-width: min(100%, calc((100vh - 370px) / 0.75)); margin-left: auto; margin-right: auto; }
+  #view-quiz .flag-answers { max-width: min(100%, calc((100vh - 420px) / 0.75)); }
+  .next-row { justify-content: flex-start; }
+}
+.next-row { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
 .kbd-hint { font-size: 13px; color: var(--muted); }
 .kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; font-size: 12px; font-weight: 700; }
 
