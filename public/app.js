@@ -315,21 +315,36 @@ function sfx(ok) {
 }
 
 /* ---------- theme ---------- */
-function applyThemeLabel() {
-  const dark = document.documentElement.dataset.theme === "dark";
-  $("#themeBtn").setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+/* ---------- looks (palette button) ---------- */
+const LOOKS = [
+  { id: "clean", name: "Clean", theme: "light", sw: ["#f6f7f9", "#2f6bff", "#d3d9e1", "#15171c"] },
+  { id: "clean-dark", name: "Clean dark", theme: "dark", sw: ["#0f1115", "#7aa2ff", "#2b313b", "#eef0f3"] },
+  { id: "pop", name: "Pop", skin: "pop", theme: "light", sw: ["#fff4dc", "#ff4f8b", "#ffd23f", "#9fd8ff"] },
+  { id: "arcade", name: "Arcade", skin: "arcade", theme: "dark", sw: ["#0b0820", "#22e4ff", "#ff3cac", "#2e2470"] },
+  { id: "explorer", name: "Explorer", skin: "explorer", theme: "light", sw: ["#efe3c8", "#b9532c", "#b2cfc6", "#3f6b2a"] },
+  { id: "tropical", name: "Tropical", skin: "tropical", theme: "light", sw: ["#dff6f3", "#ff6b4a", "#74d3e6", "#ffe3a3"] },
+  { id: "chalk", name: "Chalkboard", skin: "chalk", theme: "dark", sw: ["#1f3a30", "#ffd95e", "#f4f1e8", "#3a6252"] }
+];
+const LOOK_FONT = { pop: "Bricolage Grotesque", arcade: "Silkscreen", explorer: "Fraunces", tropical: "Fredoka", chalk: "Patrick Hand" };
+const currentLook = () => { const r = document.documentElement.dataset; return r.skin || (r.theme === "dark" ? "clean-dark" : "clean"); };
+function setLook(id) {
+  const L = LOOKS.find(l => l.id === id) || LOOKS[0], r = document.documentElement;
+  if (L.skin) r.dataset.skin = L.skin; else delete r.dataset.skin;
+  r.dataset.theme = L.theme;
+  try { localStorage.setItem("geography-gym-look", L.id); localStorage.setItem("geography-gym-theme", L.theme); } catch (e) {}
+  renderLooks();
 }
-$("#themeBtn").addEventListener("click", () => {
-  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-  document.documentElement.dataset.theme = next;
-  try { localStorage.setItem("geography-gym-theme", next); } catch (e) {}
-  applyThemeLabel();
-});
-applyThemeLabel();
+function renderLooks() {
+  const cur = currentLook();
+  $("#looks").innerHTML = LOOKS.map(l => `<button type="button" class="look-btn" data-look="${l.id}" aria-pressed="${l.id === cur}"${LOOK_FONT[l.id] ? ` style="font-family:'${LOOK_FONT[l.id]}',var(--font)"` : ""}>
+    <span class="look-sw" style="background:${l.sw[0]}">${l.sw.slice(1).map(c => `<i style="background:${c}"></i>`).join("")}</span>${esc(l.name)}</button>`).join("");
+}
+$("#looks").addEventListener("click", e => { const b = e.target.closest("[data-look]"); if (b) setLook(b.dataset.look); });
+renderLooks();
 
 /* ---------- popovers: topic menu + settings panel ---------- */
 const menu = $("#menu"), menuBtn = $("#menuBtn"), setPanel = $("#setPanel"), setBtn = $("#setBtn");
-const POPS = [[menuBtn, menu], [setBtn, setPanel]];
+const POPS = [[menuBtn, menu], [setBtn, setPanel], [$("#themeBtn"), $("#lookPanel")]];
 const anyOpen = () => POPS.some(([, p]) => !p.hidden);
 function setPop(btn, open) {
   POPS.forEach(([b, p]) => { const o = b === btn && open; p.hidden = !o; b.setAttribute("aria-expanded", o); });
