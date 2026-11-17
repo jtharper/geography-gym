@@ -1,6 +1,6 @@
-# Flag Atlas
+# Geography Gym
 
-A browser game for learning every country flag. It's a plain static site with no framework and no build step. Everything the browser loads is in `public/`.
+Browser geography quizzes. Country flags come first, with more topics (capitals, state flags, lakes…) to follow. It's a plain static site with no framework and no build step. Everything the browser loads is in `public/`.
 
 ## Modes
 

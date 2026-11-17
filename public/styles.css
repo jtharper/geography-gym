@@ -3,7 +3,7 @@
 @font-face { font-family: "Manrope"; src: url("fonts/manrope-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 @font-face { font-family: "Manrope"; src: url("fonts/manrope-latin-800-normal.woff2") format("woff2"); font-weight: 800; font-display: swap; }
 
-/* Flag Atlas, "Clean": one centered column, the flag is the only loud thing on screen. */
+/* Geography Gym, "Clean": one centered column, the flag is the only loud thing on screen. */
 :root {
   --bg: #f6f7f9;
   --surface: #ffffff;

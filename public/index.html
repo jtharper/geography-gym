@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Flag Atlas</title>
-<meta name="description" content="Learn every country flag in the world. Practice, quiz yourself, and try to name all 197.">
+<title>Geography Gym</title>
+<meta name="description" content="Geography Gym: practice until you know every country flag in the world. Quiz yourself, or try to name all 197.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/manrope-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script>
   try {
-    var t = localStorage.getItem("flag-atlas-theme");
+    var t = localStorage.getItem("geography-gym-theme") || localStorage.getItem("flag-atlas-theme");
     if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     document.documentElement.dataset.theme = t;
   } catch (e) {}
@@ -19,12 +19,12 @@
 <body>
 <header class="top">
   <a class="logo" href="#practice">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h12l-2 4 2 4H5"/></svg>
-    Flag Atlas
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></svg>
+    Geography Gym
   </a>
   <div class="top-right">
     <div class="progress-mini" aria-live="polite">
-      <span><b id="meterNum">0</b> of <span id="meterTot">0</span> learned</span>
+      <span><b id="meterNum">0</b> of <span id="meterTot">0</span> flags learned</span>
       <span class="bar"><span id="meterFill"></span></span>
     </div>
     <button class="icon-btn" id="themeBtn" type="button" aria-label="Switch to dark mode">

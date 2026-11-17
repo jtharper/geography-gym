@@ -1,4 +1,4 @@
-/* Flag Atlas game logic. No build step: edit and deploy. */
+/* Geography Gym: country flags game logic. No build step: edit and deploy. */
 "use strict";
 
 let COUNTRIES = [];
@@ -71,9 +71,9 @@ function judgeTyped(input, target) {
 }
 
 /* ---------- storage ---------- */
-const KEY = "flag-atlas-v1";
+const KEY = "geography-gym-flags-v1";
 let store = { p: {}, best: {}, sound: false, style: "choice", region: "All", terr: false };
-try { const raw = localStorage.getItem(KEY); if (raw) store = Object.assign(store, JSON.parse(raw)); } catch (e) {}
+try { const raw = localStorage.getItem(KEY) || localStorage.getItem("flag-atlas-v1"); if (raw) store = Object.assign(store, JSON.parse(raw)); } catch (e) {}
 if (!REGIONS.includes(store.region)) store.region = "All";
 if (!["choice", "type", "reverse"].includes(store.style)) store.style = "choice";
 function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} }
@@ -124,7 +124,7 @@ function applyThemeLabel() {
 $("#themeBtn").addEventListener("click", () => {
   const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next;
-  try { localStorage.setItem("flag-atlas-theme", next); } catch (e) {}
+  try { localStorage.setItem("geography-gym-theme", next); } catch (e) {}
   applyThemeLabel();
 });
 applyThemeLabel();

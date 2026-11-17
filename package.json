@@ -1,8 +1,8 @@
 {
-  "name": "flag-atlas",
+  "name": "geography-gym",
   "version": "1.0.0",
   "private": true,
-  "description": "A game for learning every country flag.",
+  "description": "Geography quizzes: country flags first, with more topics to come.",
   "type": "module",
   "scripts": {
     "data": "node scripts/build-data.mjs",
