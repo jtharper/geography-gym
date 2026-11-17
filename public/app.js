@@ -59,15 +59,44 @@ const TOPICS = [
   { id: "state-abbr", group: "United States", name: "State abbreviations", unit: "abbreviations", set: "states", kind: "text", field: "code", regions: US_REGIONS, terr: false,
     styles: ["choice", "type"], ask: "Which state is this?", typeHolder: "Type the state", nameHint: "Type the state for every abbreviation." }
 ];
+// Provinces and states of other countries: same engine, one set per country
+const ONE = ["All"];
+const placeTopics = (set, group, adj, one, many, opts) => {
+  const base = { group, set, regions: ONE, terr: !!opts.terr, terrOn: !!opts.terr };
+  const q = `Which ${one} is this?`, typ = `Type the ${one.split(" ")[0]}`;
+  return [
+    opts.flags && { ...base, id: `${set}-flags`, short: "Flags", name: `${adj} flags`, unit: "flags", kind: "flag", styles: ["choice", "type", "reverse"],
+      ask: q, find: "Find the flag of", typeHolder: typ, nameHint: `Type every ${one} you can think of.` },
+    { ...base, id: `${set}-capitals`, short: "Capitals", name: `${adj} capitals`, unit: "capitals", kind: "fact", field: "cap", styles: ["choice", "type"],
+      ask: "What's the capital?", typeHolder: "Type the capital", nameHint: `Type every ${one} capital you can think of.` },
+    { ...base, id: `${set}-map`, short: "Find on the map", name: `Map of ${group}`, unit: many, kind: "locate", styles: ["map"], ask: "Find", modes: ["practice", "quiz"] },
+    { ...base, id: `${set}-shapes`, short: "Shapes", name: `${adj} shapes`, unit: "shapes", kind: "shape", styles: ["choice", "type"],
+      ask: `Which ${one} has this shape?`, typeHolder: typ, nameHint: `Name every ${one} from its outline.` },
+    opts.abbr && { ...base, id: `${set}-abbr`, short: "Abbreviations", name: `${adj} abbreviations`, unit: "abbreviations", kind: "text", field: "code", styles: ["choice", "type"],
+      ask: q, typeHolder: typ, nameHint: "Type the name for every abbreviation." }
+  ].filter(Boolean);
+};
+TOPICS.push(
+  ...placeTopics("ca", "Canada", "Canadian", "province or territory", "provinces", { flags: true, abbr: true, terr: true }),
+  ...placeTopics("au", "Australia", "Australian", "state or territory", "states", { flags: true, abbr: true, terr: true }),
+  ...placeTopics("de", "Germany", "German", "state", "states", { flags: true }),
+  ...placeTopics("mx", "Mexico", "Mexican", "state", "states", {})
+);
 TOPICS.forEach(t => { t.modes = t.modes || ALL_MODES; });
 const TOPIC = Object.fromEntries(TOPICS.map(t => [t.id, t]));
 const MODES = ["practice", "quiz", "name-all", "browse"];
 const MODE_NAMES = { practice: "Practice", quiz: "Quiz", "name-all": "Name them", browse: "Browse" };
 const SETS = {
-  countries: { data: "data/countries.json", images: "data/flags.json", map: "data/world-map.json", rows: null, img: {}, loading: null },
-  states: { data: "data/states.json", images: "data/state-flags.json", map: "data/us-map.json", rows: null, img: {}, loading: null },
-  nature: { data: "data/nature.json", images: null, map: "data/world-map.json", rows: null, img: {}, loading: null, needs: ["countries"] }
+  countries: { data: "data/countries.json", images: "data/flags.json", map: "data/world-map.json", whole: "the whole world" },
+  states: { data: "data/states.json", images: "data/state-flags.json", map: "data/us-map.json", whole: "all 50 states" },
+  nature: { data: "data/nature.json", images: null, map: "data/world-map.json", whole: "the whole world", needs: ["countries"] },
+  ca: { data: "data/ca.json", images: "data/ca-flags.json", map: "data/ca-map.json", whole: "all of Canada" },
+  au: { data: "data/au.json", images: "data/au-flags.json", map: "data/au-map.json", whole: "all of Australia" },
+  de: { data: "data/de.json", images: "data/de-flags.json", map: "data/de-map.json", whole: "all of Germany" },
+  mx: { data: "data/mx.json", images: null, map: "data/mx-map.json", whole: "all of Mexico" }
 };
+Object.values(SETS).forEach(s => Object.assign(s, { rows: null, img: {}, loading: null }));
+const cap1 = s => s.charAt(0).toUpperCase() + s.slice(1);
 
 /* ---------- country flag look-alikes ---------- */
 const GROUPS = [
@@ -129,7 +158,7 @@ function prefs(def) {
   const p = settings.per[def.id] || (settings.per[def.id] = {});
   if (!def.styles.includes(p.style)) p.style = def.styles[0];
   if (!def.regions.includes(p.region)) p.region = "All";
-  p.terr = def.terr && !!p.terr;
+  p.terr = def.terr && (p.terr === undefined ? !!def.terrOn : !!p.terr);
   return p;
 }
 function loadProgress(id) {
@@ -301,7 +330,11 @@ const anyOpen = () => POPS.some(([, p]) => !p.hidden);
 function setPop(btn, open) {
   POPS.forEach(([b, p]) => { const o = b === btn && open; p.hidden = !o; b.setAttribute("aria-expanded", o); });
 }
-POPS.forEach(([b, p]) => b.addEventListener("click", e => { e.stopPropagation(); setPop(b, p.hidden); }));
+POPS.forEach(([b, p]) => b.addEventListener("click", e => {
+  e.stopPropagation();
+  if (p === menu && p.hidden && T) showMenuGroup(T.def.group);
+  setPop(b, p.hidden);
+}));
 document.addEventListener("click", e => { if (anyOpen() && !POPS.some(([b, p]) => p.contains(e.target) || b.contains(e.target))) setPop(null, false); });
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape" || !anyOpen()) return;
@@ -310,28 +343,41 @@ document.addEventListener("keydown", e => {
 menu.addEventListener("click", e => { if (e.target.closest("a[href^='#']")) setPop(null, false); });
 
 const CHECK = `<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+// Topic menu: a row of group tabs, then the topics of one group (keeps the list short)
+const GROUP_NAMES = [...new Set(TOPICS.map(t => t.group))];
+let menuGroup = GROUP_NAMES[0];
 function renderTopicMenu() {
-  const groups = [...new Set(TOPICS.map(t => t.group))];
-  $("#topicList").innerHTML = groups.map(g => `<div class="menu-group">${esc(g)}</div>` +
-    TOPICS.filter(t => t.group === g).map(t => `<a href="#${t.id}-practice" data-topic="${t.id}">${esc(t.name)}${CHECK}</a>`).join("")).join("");
+  $("#menuTabs").innerHTML = GROUP_NAMES.map(g => `<button type="button" role="tab" data-group="${esc(g)}" aria-selected="${g === menuGroup}">${esc(g)}</button>`).join("");
+  $("#topicList").innerHTML = TOPICS.map(t => `<a href="#${t.id}-practice" data-topic="${t.id}"${t.group === menuGroup ? "" : " hidden"}>${esc(t.short || t.name)}${CHECK}</a>`).join("");
+  if (T) syncTopicLinks();
 }
+function showMenuGroup(g) {
+  menuGroup = g;
+  $("#menuTabs").querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", b.dataset.group === g));
+  $("#topicList").querySelectorAll("a").forEach(a => { a.hidden = TOPIC[a.dataset.topic].group !== g; });
+}
+$("#menuTabs").addEventListener("click", e => { const b = e.target.closest("[data-group]"); if (b) showMenuGroup(b.dataset.group); });
 renderTopicMenu();
 
-function renderSettings() {
-  const def = T.def, p = T.pref;
-  $("#menuLabel").textContent = def.name;
+function syncTopicLinks() {
   document.querySelectorAll("#topicList a").forEach(a => {
     const t = TOPIC[a.dataset.topic];
     a.href = `#${t.id}-${t.modes.includes(state.view) ? state.view : "practice"}`;
-    if (t.id === def.id) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
+    if (T && t.id === T.def.id) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
   });
+}
+function renderSettings() {
+  const def = T.def, p = T.pref;
+  $("#menuLabel").textContent = def.name;
+  syncTopicLinks();
   document.querySelectorAll("#modeNav a").forEach(a => { a.href = `#${def.id}-${a.dataset.view}`; a.hidden = !def.modes.includes(a.dataset.view); });
   $("#setTopic").textContent = `for ${def.name}`;
   $("#regionSel").innerHTML = def.regions.map(r => {
     const n = T.items.filter(it => kindOk(it) && (r === "All" || it.r === r)).length;
-    const label = r === "All" ? (def.set === "states" ? "All 50 states" : "Whole world") : r;
+    const label = r === "All" ? cap1(SETS[def.set].whole) : r;
     return `<option value="${r}"${r === p.region ? " selected" : ""}>${label} (${n})</option>`;
   }).join("");
+  $("#regionSel").parentElement.hidden = def.regions.length < 2;
   $("#terrRow").hidden = !def.terr;
   $("#terrToggle").checked = p.terr;
   $("#soundToggle").checked = settings.sound;
@@ -851,7 +897,7 @@ const quiz = (() => {
     const isCompare = T.def.kind === "compare";
     const lens = isCompare ? [10, 20, 30] : [10, 20, 50].filter(n => n < P.length).concat([P.length]);
     if (!lens.includes(len)) len = lens.includes(20) ? 20 : lens[0];
-    const where = T.pref.region === "All" ? (T.def.set === "states" ? "all 50 states" : "the whole world") : T.pref.region;
+    const where = T.pref.region === "All" ? SETS[T.def.set].whole : T.pref.region;
     host().innerHTML = `<div class="setup">
       <div><h1>${esc(T.def.name)}</h1><p>A timed quiz, from ${esc(where)}. You can change this in settings.</p></div>
       <div class="field"><span id="lenLbl">How many</span><div class="seg" role="group" aria-labelledby="lenLbl" id="qLen">${lens.map(n => `<button type="button" data-len="${n}" aria-pressed="${n === len}">${!isCompare && n === P.length ? `All ${n}` : n}</button>`).join("")}</div></div>
@@ -922,7 +968,7 @@ const nameAll = (() => {
     if (timer) clearInterval(timer); timer = null; clearTimeout(pending);
     if (!T.def.modes.includes("name-all")) { g = null; return; }
     const P = pool();
-    const order = {}; T.def.regions.slice(1).forEach(r => order[r] = shuffle(P.filter(it => it.r === r)));
+    const order = {}; boardSections().forEach(r => order[r] = shuffle(P.filter(it => it.r === r)));
     g = { P, order, found: new Set(), t0: null, done: false, gave: false, ids: new Set(P.map(it => it.id)) };
     input.value = ""; input.disabled = false;
     input.placeholder = T.def.typeHolder;
@@ -930,9 +976,11 @@ const nameAll = (() => {
     $("#naGiveUp").disabled = false;
     render(); banner();
   }
+  // One section per region; countries without regions get a single section
+  const boardSections = () => T.def.regions.length > 1 ? T.def.regions.slice(1) : [...new Set(T.items.map(it => it.r))];
   function render() {
     let h = "";
-    for (const r of T.def.regions.slice(1)) {
+    for (const r of boardSections()) {
       const list = g.order[r]; if (!list.length) continue;
       const f = list.filter(it => g.found.has(it.id)).length;
       h += `<div class="region-h"><h2>${r}</h2><span data-rc="${r}">${f} / ${list.length}</span></div><div class="grid">${list.map(tileHTML).join("")}</div>`;

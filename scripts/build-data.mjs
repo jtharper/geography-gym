@@ -295,3 +295,96 @@ const nature = [
 ];
 fs.writeFileSync('public/data/nature.json', JSON.stringify(nature));
 console.log('nature:', ['lake', 'river', 'range'].map(t => `${nature.filter(x => x.t === t).length} ${t}s`).join(', '));
+
+/* ---------------- Provinces and states of Canada, Australia, Germany and Mexico ----------------
+   Outlines: Natural Earth 1:10m admin-1 (public domain), simplified with shared borders kept.
+   Flags: Canada from region-flags; Australia and Germany from niemela/flags (Wikimedia Commons, public domain).
+   Mexico's states have no official flags, so Mexico has no flag topics. */
+const { topology } = require('topojson-server');
+const { presimplify, simplify, quantile, sphericalTriangleArea } = require('topojson-simplify');
+const { geoConicConformal, geoConicEqualArea } = await import('d3-geo');
+const NIEMELA = 'https://raw.githubusercontent.com/niemela/flags/master/data/';
+// [code, name, capital, kind, other names, other capital spellings]
+const PLACES = {
+  ca: { a3: 'CAN', label: 'Canada', proj: () => geoConicConformal().parallels([49, 77]).rotate([96, 0]), keep: 0.12, minA: 6,
+    flags: code => fs.readFileSync(`node_modules/region-flags/svg/CA-${code}.svg`, 'utf8'),
+    rows: [
+      ['AB', 'Alberta', 'Edmonton', 'province'], ['BC', 'British Columbia', 'Victoria', 'province'], ['MB', 'Manitoba', 'Winnipeg', 'province'],
+      ['NB', 'New Brunswick', 'Fredericton', 'province'], ['NL', 'Newfoundland and Labrador', "St. John's", 'province', ['Newfoundland'], ["Saint John's", 'St Johns']],
+      ['NS', 'Nova Scotia', 'Halifax', 'province'], ['ON', 'Ontario', 'Toronto', 'province'], ['PE', 'Prince Edward Island', 'Charlottetown', 'province', ['PEI']],
+      ['QC', 'Quebec', 'Quebec City', 'province', ['Québec'], ['Québec City', 'Québec']], ['SK', 'Saskatchewan', 'Regina', 'province'],
+      ['NT', 'Northwest Territories', 'Yellowknife', 'territory', ['NWT']], ['NU', 'Nunavut', 'Iqaluit', 'territory'], ['YT', 'Yukon', 'Whitehorse', 'territory']
+    ] },
+  au: { a3: 'AUS', label: 'Australia', proj: () => geoConicEqualArea().parallels([-18, -36]).rotate([-134, 0]), keep: 0.2, minA: 4,
+    flags: async code => (await fetch(`${NIEMELA}AU-${code}.svg`)).text(), drop: ['AU-X03~'],
+    rows: [
+      ['NSW', 'New South Wales', 'Sydney', 'state'], ['VIC', 'Victoria', 'Melbourne', 'state'], ['QLD', 'Queensland', 'Brisbane', 'state'],
+      ['WA', 'Western Australia', 'Perth', 'state'], ['SA', 'South Australia', 'Adelaide', 'state'], ['TAS', 'Tasmania', 'Hobart', 'state'],
+      ['ACT', 'Australian Capital Territory', 'Canberra', 'territory', ['Capital Territory']], ['NT', 'Northern Territory', 'Darwin', 'territory']
+    ] },
+  de: { a3: 'DEU', label: 'Germany', proj: () => geoConicConformal().parallels([48, 54]).rotate([-10.4, 0]), keep: 0.3, minA: 2,
+    flags: async code => (await fetch(`${NIEMELA}DE-${code}.svg`)).text(),
+    rows: [
+      ['BW', 'Baden-Württemberg', 'Stuttgart', 'state'], ['BY', 'Bavaria', 'Munich', 'state', ['Bayern'], ['München']],
+      ['BE', 'Berlin', 'Berlin', 'state'], ['BB', 'Brandenburg', 'Potsdam', 'state'], ['HB', 'Bremen', 'Bremen', 'state'],
+      ['HH', 'Hamburg', 'Hamburg', 'state'], ['HE', 'Hesse', 'Wiesbaden', 'state', ['Hessen']],
+      ['MV', 'Mecklenburg-Vorpommern', 'Schwerin', 'state', ['Mecklenburg-Western Pomerania', 'Mecklenburg']],
+      ['NI', 'Lower Saxony', 'Hanover', 'state', ['Niedersachsen'], ['Hannover']], ['NW', 'North Rhine-Westphalia', 'Düsseldorf', 'state', ['Nordrhein-Westfalen', 'NRW']],
+      ['RP', 'Rhineland-Palatinate', 'Mainz', 'state', ['Rheinland-Pfalz']], ['SL', 'Saarland', 'Saarbrücken', 'state'],
+      ['SN', 'Saxony', 'Dresden', 'state', ['Sachsen']], ['ST', 'Saxony-Anhalt', 'Magdeburg', 'state', ['Sachsen-Anhalt']],
+      ['SH', 'Schleswig-Holstein', 'Kiel', 'state'], ['TH', 'Thuringia', 'Erfurt', 'state', ['Thüringen']]
+    ] },
+  mx: { a3: 'MEX', label: 'Mexico', proj: () => geoConicConformal().parallels([17.5, 29.5]).rotate([102, 0]), keep: 0.25, minA: 3,
+    flags: null, codeFix: { DIF: 'CMX' }, drop: ['MX-X01~'],
+    rows: [
+      ['AGU', 'Aguascalientes', 'Aguascalientes', 'state'], ['BCN', 'Baja California', 'Mexicali', 'state'], ['BCS', 'Baja California Sur', 'La Paz', 'state'],
+      ['CAM', 'Campeche', 'Campeche', 'state', [], ['San Francisco de Campeche']], ['CHP', 'Chiapas', 'Tuxtla Gutiérrez', 'state', [], ['Tuxtla']],
+      ['CHH', 'Chihuahua', 'Chihuahua', 'state'], ['COA', 'Coahuila', 'Saltillo', 'state'], ['COL', 'Colima', 'Colima', 'state'],
+      ['CMX', 'Mexico City', 'Mexico City', 'city', ['CDMX', 'Ciudad de México']], ['DUR', 'Durango', 'Durango', 'state', [], ['Victoria de Durango']],
+      ['GUA', 'Guanajuato', 'Guanajuato', 'state'], ['GRO', 'Guerrero', 'Chilpancingo', 'state'], ['HID', 'Hidalgo', 'Pachuca', 'state'],
+      ['JAL', 'Jalisco', 'Guadalajara', 'state'], ['MEX', 'State of Mexico', 'Toluca', 'state', ['México', 'Estado de México', 'Mexico State']],
+      ['MIC', 'Michoacán', 'Morelia', 'state'], ['MOR', 'Morelos', 'Cuernavaca', 'state'], ['NAY', 'Nayarit', 'Tepic', 'state'],
+      ['NLE', 'Nuevo León', 'Monterrey', 'state'], ['OAX', 'Oaxaca', 'Oaxaca', 'state', [], ['Oaxaca de Juárez']], ['PUE', 'Puebla', 'Puebla', 'state'],
+      ['QUE', 'Querétaro', 'Querétaro', 'state', [], ['Santiago de Querétaro']], ['ROO', 'Quintana Roo', 'Chetumal', 'state'],
+      ['SLP', 'San Luis Potosí', 'San Luis Potosí', 'state'], ['SIN', 'Sinaloa', 'Culiacán', 'state'], ['SON', 'Sonora', 'Hermosillo', 'state'],
+      ['TAB', 'Tabasco', 'Villahermosa', 'state'], ['TAM', 'Tamaulipas', 'Ciudad Victoria', 'state'], ['TLA', 'Tlaxcala', 'Tlaxcala', 'state'],
+      ['VER', 'Veracruz', 'Xalapa', 'state', [], ['Jalapa']], ['YUC', 'Yucatán', 'Mérida', 'state'], ['ZAC', 'Zacatecas', 'Zacatecas', 'state']
+    ] }
+};
+const admin1 = await getJSON('ne_10m_admin_1_states_provinces.geojson');
+for (const [key, P] of Object.entries(PLACES)) {
+  // Data rows
+  const rows = P.rows.map(([c, n, cap, k, alts = [], capAlts = []]) => ({ c, n, a: alts, r: P.label, cap, caps: [cap, ...capAlts], k }));
+  fs.writeFileSync(`public/data/${key}.json`, JSON.stringify(rows));
+  if (P.flags) {
+    const imgs = [];
+    for (const r of rows) imgs.push({ c: r.c, s: optimize(await P.flags(r.c), { multipass: true, floatPrecision: 1, plugins: ['preset-default', 'removeDimensions'] }).data });
+    writeImages(`public/data/${key}-flags.json`, imgs);
+  }
+  // Map: simplify in lon/lat with shared borders, then project
+  const feats = admin1.features.filter(f => f.properties.adm0_a3 === P.a3 && !(P.drop || []).includes(f.properties.iso_3166_2))
+    .map(f => { let c = f.properties.iso_3166_2.split('-')[1]; c = (P.codeFix || {})[c] || c; return { type: 'Feature', properties: { c }, geometry: f.geometry }; });
+  let t = presimplify(topology({ a: { type: 'FeatureCollection', features: feats } }, 1e6), sphericalTriangleArea);
+  t = simplify(t, quantile(t, P.keep)); // keep this share of points
+  const fc = topo.feature(t, t.objects.a);
+  const pj = P.proj().fitWidth(W, fc);
+  const path = geoPath(pj).digits(1);
+  const shapes = [], info = {}, known = new Set(rows.map(r => r.c));
+  for (const f of fc.features) {
+    let g = f.geometry;
+    if (!g) continue;
+    if (g.type === 'MultiPolygon') { // drop specks too small to see; always keep the largest part
+      const parts = g.coordinates.map(c => ({ c, a: path.area({ type: 'Polygon', coordinates: c }) })).sort((x, y) => y.a - x.a);
+      g = { type: 'MultiPolygon', coordinates: parts.filter((p, i) => i === 0 || p.a >= P.minA).map(p => p.c) };
+    }
+    const code = known.has(f.properties.c) ? f.properties.c : null;
+    shapes.push({ c: code, d: path(g) });
+    if (code) { const m = mainInfo(path, g); if (!info[code] || m.a > info[code].a) info[code] = m; }
+  }
+  for (const k in info) delete info[k].a;
+  const b = path.bounds(fc);
+  const pad = 8;
+  fs.writeFileSync(`public/data/${key}-map.json`, JSON.stringify({ vb: [r1(b[0][0] - pad), r1(b[0][1] - pad), r1(b[1][0] - b[0][0] + 2 * pad), r1(b[1][1] - b[0][1] + 2 * pad)], shapes, info, markers: [] }));
+  const missing = rows.filter(r => !info[r.c]).map(r => r.c);
+  console.log(`${P.label}: ${rows.length} places, ${shapes.length} shapes${P.flags ? ', flags' : ''}${missing.length ? ', MISSING ' + missing.join(' ') : ''}`);
+}
