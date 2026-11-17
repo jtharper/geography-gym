@@ -39,6 +39,23 @@ const capitalFix = {
   AG: ["Saint John's", "St. John's"]
 };
 const regionOf = c => c.region === 'Antarctic' ? 'South America' : c.region === 'Americas' ? (c.subregion === 'South America' ? 'South America' : 'North America') : c.region;
+// Population: World Bank (datasets/population on GitHub), latest year for each country
+const popCsv = await (await fetch('https://raw.githubusercontent.com/datasets/population/main/data/population.csv')).text();
+const POP = {};
+for (const line of popCsv.trim().split(/\r?\n/).slice(1)) {
+  const parts = line.split(',');
+  const val = parts.pop(), year = parts.pop(), iso3 = parts.pop();
+  if (!/^[A-Z0-9]{3}$/.test(iso3) || !/^\d{4}$/.test(year) || !val) continue;
+  if (!POP[iso3] || +year > POP[iso3].y) POP[iso3] = { y: +year, v: Math.round(+val) };
+}
+const cca3to2 = Object.fromEntries(all.map(c => [c.cca3, c.cca2]));
+const PHONE_FIX = { VA: '+39', SH: '+290' }; // Vatican City uses Italy's +39; Saint Helena is +290
+const phoneOf = c => {
+  if (PHONE_FIX[c.cca2]) return PHONE_FIX[c.cca2];
+  const r = c.idd && c.idd.root; if (!r) return '';
+  const sx = c.idd.suffixes || [];
+  return sx.length === 1 ? r + sx[0] : r;
+};
 const countries = [], flags = [];
 for (const c of all) {
   const code = c.cca2;
@@ -49,7 +66,15 @@ for (const c of all) {
   flags.push({ c: code, s: svgo(fs.readFileSync(`node_modules/flag-icons/flags/4x3/${code.toLowerCase()}.svg`, 'utf8')) });
   const alt = new Set([c.name.common, c.name.official, ...(aliases[code] || []), ...c.altSpellings.filter(a => a.length > 3 && /^[\x00-\x7F]+$/.test(a))]);
   const caps = capitalFix[code] || [...(c.capital || [])];
-  countries.push({ c: code, n: c.name.common, a: [...alt].filter(x => x !== c.name.common), r: regionOf(c), sr: c.subregion, cap: caps[0] || '', caps, k: kind });
+  const cur = Object.values(c.currencies || {}).map(x => x.name);
+  const lang = Object.values(c.languages || {});
+  const pop = POP[c.cca3] || (code === 'XK' ? POP.XKX : null);
+  countries.push({
+    c: code, n: c.name.common, a: [...alt].filter(x => x !== c.name.common), r: regionOf(c), sr: c.subregion, cap: caps[0] || '', caps, k: kind,
+    cur, lang, tld: (c.tld || [])[0] || '', ph: phoneOf(c),
+    nb: (c.borders || []).map(x => cca3to2[x]).filter(x => x && (extraCountries.includes(x) || all.find(y => y.cca2 === x && (y.unMember || territories.includes(x))))),
+    area: c.area < 10 ? Math.round(c.area * 100) / 100 : Math.round(c.area), pop: pop ? pop.v : null, popY: pop ? pop.y : null
+  });
 }
 countries.sort((a, b) => a.n.localeCompare(b.n));
 const nameFix = { CI: "Côte d'Ivoire", VA: 'Vatican City', PS: 'Palestine', KR: 'South Korea', KP: 'North Korea', MK: 'North Macedonia', CD: 'DR Congo', CG: 'Republic of the Congo', SH: 'Saint Helena', GS: 'South Georgia', US: 'United States', GB: 'United Kingdom' };

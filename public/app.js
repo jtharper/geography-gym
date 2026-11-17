@@ -1,25 +1,61 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 
-/* ---------- topics ---------- */
+/* ---------- topics ----------
+   kind: flag      flag image → name (also "pick the flag")
+         fact      flag + name → a fact (capital, currency, language, domain, phone code)
+         text      a word or code → name (capital → country, "OH" → Ohio)
+         shape     outline → name
+         locate    name → click it on the map
+         neighbors country → pick a country that borders it
+         compare   two places → which is bigger / has more people
+*/
 const WORLD_REGIONS = ["All", "Africa", "Asia", "Europe", "North America", "South America", "Oceania"];
 const US_REGIONS = ["All", "Northeast", "Midwest", "South", "West"];
+const ALL_MODES = ["practice", "quiz", "name-all", "browse"];
+const PQB = ["practice", "quiz", "browse"];
 const TOPICS = [
-  { id: "flags", name: "Country flags", unit: "flags", set: "countries", kind: "flag", regions: WORLD_REGIONS, terr: true,
+  { id: "flags", group: "World", name: "Country flags", unit: "flags", set: "countries", kind: "flag", regions: WORLD_REGIONS, terr: true,
     styles: ["choice", "type", "reverse"], ask: "Which country is this?", find: "Find the flag of", typeHolder: "Type the country",
     nameHint: "Type every country you can think of. Short names like USA, UK and Ivory Coast work too.", groups: true },
-  { id: "capitals", name: "Country capitals", unit: "capitals", set: "countries", kind: "capital", regions: WORLD_REGIONS, terr: true,
-    styles: ["choice", "type"], ask: "What's the capital?", typeHolder: "Type the capital",
-    nameHint: "Type every capital city you can think of." },
-  { id: "state-flags", name: "US state flags", unit: "state flags", set: "states", kind: "flag", regions: US_REGIONS, terr: false,
-    styles: ["choice", "type", "reverse"], ask: "Which state is this?", find: "Find the flag of", typeHolder: "Type the state",
-    nameHint: "Type every state you can think of." },
-  { id: "state-capitals", name: "US state capitals", unit: "state capitals", set: "states", kind: "capital", regions: US_REGIONS, terr: false,
-    styles: ["choice", "type"], ask: "What's the capital?", typeHolder: "Type the capital",
-    nameHint: "Type every state capital you can think of." }
+  { id: "capitals", group: "World", name: "Country capitals", unit: "capitals", set: "countries", kind: "fact", field: "cap", regions: WORLD_REGIONS, terr: true,
+    styles: ["choice", "type"], ask: "What's the capital?", typeHolder: "Type the capital", nameHint: "Type every capital city you can think of." },
+  { id: "capitals-rev", group: "World", name: "Capitals → country", unit: "capitals", set: "countries", kind: "text", field: "cap", regions: WORLD_REGIONS, terr: true,
+    styles: ["choice", "type"], ask: "Which country's capital is this?", typeHolder: "Type the country", modes: PQB },
+  { id: "map", group: "World", name: "Find it on the map", unit: "countries", set: "countries", kind: "locate", regions: WORLD_REGIONS, terr: true,
+    styles: ["map"], ask: "Find", modes: ["practice", "quiz"] },
+  { id: "shapes", group: "World", name: "Country shapes", unit: "shapes", set: "countries", kind: "shape", regions: WORLD_REGIONS, terr: true,
+    styles: ["choice", "type"], ask: "Which country has this shape?", typeHolder: "Type the country", nameHint: "Name every country from its outline." },
+  { id: "neighbors", group: "World", name: "Neighbors", unit: "countries", set: "countries", kind: "neighbors", regions: WORLD_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "Which country borders it?", typeHolder: "Type any country that borders it", modes: PQB },
+  { id: "currencies", group: "World", name: "Currencies", unit: "currencies", set: "countries", kind: "fact", field: "cur", multi: true, regions: WORLD_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "Which currency is used here?", typeHolder: "Type the currency", modes: PQB, mapPick: false },
+  { id: "languages", group: "World", name: "Languages", unit: "countries", set: "countries", kind: "fact", field: "lang", multi: true, regions: WORLD_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "Which language is official here?", typeHolder: "Type an official language", modes: PQB, mapPick: false },
+  { id: "domains", group: "World", name: "Internet domains", unit: "domains", set: "countries", kind: "fact", field: "tld", regions: WORLD_REGIONS, terr: true,
+    styles: ["choice", "type"], ask: "What's its internet domain?", typeHolder: "Type the domain, like .fr", modes: PQB },
+  { id: "phone", group: "World", name: "Phone codes", unit: "codes", set: "countries", kind: "fact", field: "ph", regions: WORLD_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "What's its phone code?", typeHolder: "Type the code, like +33", modes: PQB, mapPick: false },
+  { id: "area", group: "World", name: "Bigger or smaller", set: "countries", kind: "compare", field: "area", regions: WORLD_REGIONS, terr: false,
+    styles: ["pair"], ask: "Which country is bigger?", verb: "is bigger", modes: PQB },
+  { id: "population", group: "World", name: "More or fewer people", set: "countries", kind: "compare", field: "pop", regions: WORLD_REGIONS, terr: false,
+    styles: ["pair"], ask: "Which country has more people?", verb: "has more people", modes: PQB },
+
+  { id: "state-flags", group: "United States", name: "State flags", unit: "state flags", set: "states", kind: "flag", regions: US_REGIONS, terr: false,
+    styles: ["choice", "type", "reverse"], ask: "Which state is this?", find: "Find the flag of", typeHolder: "Type the state", nameHint: "Type every state you can think of." },
+  { id: "state-capitals", group: "United States", name: "State capitals", unit: "state capitals", set: "states", kind: "fact", field: "cap", regions: US_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "What's the capital?", typeHolder: "Type the capital", nameHint: "Type every state capital you can think of." },
+  { id: "state-map", group: "United States", name: "Find states on the map", unit: "states", set: "states", kind: "locate", regions: US_REGIONS, terr: false,
+    styles: ["map"], ask: "Find", modes: ["practice", "quiz"] },
+  { id: "state-shapes", group: "United States", name: "State shapes", unit: "shapes", set: "states", kind: "shape", regions: US_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "Which state has this shape?", typeHolder: "Type the state", nameHint: "Name every state from its outline." },
+  { id: "state-abbr", group: "United States", name: "State abbreviations", unit: "abbreviations", set: "states", kind: "text", field: "code", regions: US_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "Which state is this?", typeHolder: "Type the state", nameHint: "Type the state for every abbreviation." }
 ];
+TOPICS.forEach(t => { t.modes = t.modes || ALL_MODES; });
 const TOPIC = Object.fromEntries(TOPICS.map(t => [t.id, t]));
 const MODES = ["practice", "quiz", "name-all", "browse"];
+const MODE_NAMES = { practice: "Practice", quiz: "Quiz", "name-all": "Name them", browse: "Browse" };
 const SETS = {
   countries: { data: "data/countries.json", images: "data/flags.json", map: "data/world-map.json", rows: null, img: {}, loading: null },
   states: { data: "data/states.json", images: "data/state-flags.json", map: "data/us-map.json", rows: null, img: {}, loading: null }
@@ -55,7 +91,7 @@ GROUPS.forEach(g => g.codes.forEach(k => (groupsOf[k] = groupsOf[k] || []).push(
 function norm(s) {
   return String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
     .replace(/&/g, " and ").replace(/\bsaint\b/g, "st").replace(/\bst\./g, "st")
-    .replace(/[^a-z0-9 ]/g, " ").replace(/\b(the|of|and)\b/g, " ").replace(/\s+/g, " ").trim();
+    .replace(/[^a-z0-9+ ]/g, " ").replace(/\b(the|of|and)\b/g, " ").replace(/\s+/g, " ").trim();
 }
 function lev(a, b) {
   const m = a.length, n = b.length; if (!m) return n; if (!n) return m;
@@ -75,7 +111,6 @@ try {
   const raw = localStorage.getItem(SKEY);
   if (raw) settings = Object.assign(settings, JSON.parse(raw));
   else {
-    // carry over settings saved by the flags-only version
     const old = JSON.parse(localStorage.getItem("geography-gym-flags-v1") || localStorage.getItem("flag-atlas-v1") || "null");
     if (old) { settings.sound = !!old.sound; settings.per.flags = { style: old.style, region: old.region, terr: old.terr }; }
   }
@@ -84,7 +119,7 @@ if (!TOPIC[settings.topic]) settings.topic = "flags";
 function saveSettings() { try { localStorage.setItem(SKEY, JSON.stringify(settings)); } catch (e) {} }
 function prefs(def) {
   const p = settings.per[def.id] || (settings.per[def.id] = {});
-  if (!def.styles.includes(p.style)) p.style = "choice";
+  if (!def.styles.includes(p.style)) p.style = def.styles[0];
   if (!def.regions.includes(p.region)) p.region = "All";
   p.terr = def.terr && !!p.terr;
   return p;
@@ -98,20 +133,64 @@ function loadProgress(id) {
   return s;
 }
 
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const fmtTime = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const listJoin = a => a.length <= 1 ? (a[0] || "") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
+function fmtVal(field, v) {
+  if (v == null) return "–";
+  if (field === "area") return (v < 10 ? v.toLocaleString("en-US", { maximumFractionDigits: 2 }) : Math.round(v).toLocaleString("en-US")) + " km²";
+  if (v >= 1e9) return (v / 1e9).toFixed(2) + " billion";
+  if (v >= 1e6) return (v / 1e6).toFixed(1) + " million";
+  return Math.round(v).toLocaleString("en-US");
+}
+
 /* ---------- active topic ---------- */
 let T = null; // { def, items, byId, alias, img, prog, pref }
+function shapeInfo(def, id) {
+  const m = MAPS[def.set]; const info = m && m.data && m.data.info[id];
+  return info && (m.data.markers || []).indexOf(id) < 0 ? info : null;
+}
 function buildTopic(def) {
   const set = SETS[def.set];
-  const items = set.rows.filter(r => def.kind === "flag" || r.cap).map(r => {
-    const where = r.sr || r.r;
-    if (def.kind === "flag") return { id: r.c, ans: r.n, alts: r.a, label: r.n, r: r.r, sr: where, k: r.k, cap: r.cap, fact: [r.cap && `Capital: ${r.cap}`, where].filter(Boolean).join(" · ") };
-    const alts = r.caps.slice(1);
-    if (/ City$/.test(r.cap)) alts.push(r.cap.slice(0, -5));
-    return { id: r.c, ans: r.cap, alts, label: r.n, r: r.r, sr: where, k: r.k, fact: `Capital of ${r.n} · ${where}` };
+  const where = r => r.sr || r.r;
+  let rows = set.rows;
+  if (def.kind === "fact" || def.kind === "text") rows = rows.filter(r => def.field === "code" || (Array.isArray(r[def.field]) ? r[def.field].length : r[def.field]));
+  if (def.kind === "compare") rows = rows.filter(r => r[def.field] != null && r[def.field] > 0);
+  if (def.kind === "neighbors") rows = rows.filter(r => r.nb && r.nb.length);
+  if (def.kind === "shape") rows = rows.filter(r => { const i = shapeInfo(def, r.c); return i && Math.max(i.b[2] - i.b[0], i.b[3] - i.b[1]) >= 1.5; });
+  if (def.kind === "locate") rows = rows.filter(r => { const m = MAPS[def.set]; return m && m.data && m.data.info[r.c]; });
+  const items = rows.map(r => {
+    const base = { id: r.c, label: r.n, r: r.r, sr: where(r), k: r.k, cap: r.cap, row: r };
+    switch (def.kind) {
+      case "fact": {
+        if (def.field === "cap") {
+          const alts = r.caps.slice(1); if (/ City$/.test(r.cap)) alts.push(r.cap.slice(0, -5));
+          return { ...base, ans: r.cap, alts, fact: `Capital of ${r.n} · ${where(r)}` };
+        }
+        if (def.multi) { const vals = r[def.field]; return { ...base, ans: vals.join(" / "), alts: vals, vals, fact: `${r.n} · ${where(r)}` }; }
+        const v = r[def.field];
+        const alts = def.field === "tld" ? [v.replace(/^\./, "")] : def.field === "ph" ? [v.replace(/^\+/, "")] : [];
+        return { ...base, ans: v, alts, fact: `${r.n} · ${where(r)}` };
+      }
+      case "text":
+        return { ...base, q: def.field === "code" ? r.c : r.cap, ans: r.n, alts: r.a || [],
+          fact: def.field === "code" ? `${r.c} is ${r.n} · ${where(r)}` : `${r.cap} is the capital of ${r.n} · ${where(r)}` };
+      case "neighbors": return { ...base, ans: r.n, alts: r.a || [], nb: r.nb, fact: `${r.n} · ${where(r)}` };
+      case "compare": return { ...base, ans: r.n, alts: r.a || [], val: r[def.field], fact: where(r) };
+      default: return { ...base, ans: r.n, alts: r.a || [], fact: [r.cap && `Capital: ${r.cap}`, where(r)].filter(Boolean).join(" · ") };
+    }
   });
   const alias = new Map();
   items.forEach(it => [it.ans, ...it.alts].forEach(a => { const k = norm(a); if (!k) return; if (!alias.has(k)) alias.set(k, new Set()); alias.get(k).add(it.id); }));
-  return { def, items, byId: Object.fromEntries(items.map(i => [i.id, i])), alias, img: set.img, prog: loadProgress(def.id), pref: prefs(def) };
+  // Neighbors: names of every country (neighbors may be outside the item list, e.g. islands have none)
+  if (def.kind === "neighbors") set.rows.forEach(r => [r.n, ...(r.a || [])].forEach(a => { const k = norm(a); if (!alias.has(k)) alias.set(k, new Set()); alias.get(k).add(r.c); }));
+  const byId = Object.fromEntries(items.map(i => [i.id, i]));
+  const rowById = Object.fromEntries(set.rows.map(r => [r.c, r]));
+  return { def, items, byId, rowById, alias, img: set.img, prog: loadProgress(def.id), pref: prefs(def) };
 }
 function saveProgress() { try { localStorage.setItem(`geography-gym-${T.def.id}-v1`, JSON.stringify(T.prog)); } catch (e) {} }
 function rec(id) { return T.prog.p[id] || (T.prog.p[id] = { b: 0, s: 0, r: 0 }); }
@@ -119,46 +198,52 @@ function status(id) { const r = T.prog.p[id]; if (!r || !r.s) return "new"; retu
 function grade(id, ok) {
   const r = rec(id);
   if (ok) r.b = r.s === 0 ? 2 : Math.min(5, r.b + 1); else r.b = 0;
-  r.s++; if (ok) r.r++;
+  r.s++; if (ok) r.r++; r.t = Date.now();
   saveProgress(); updateMeter();
 }
 const kindOk = it => T.pref.terr || it.k !== "territory";
 const pool = () => T.items.filter(it => kindOk(it) && (T.pref.region === "All" || it.r === T.pref.region));
 const poolKey = () => T.pref.region + (T.pref.terr ? "+t" : "");
+const nameOf = id => (T.rowById[id] && T.rowById[id].n) || (T.byId[id] && T.byId[id].label) || id;
 
-function judgeTyped(input, target) {
-  const q = norm(input);
-  if (!q) return null;
-  if ([target.ans, ...target.alts].some(a => norm(a) === q)) return { ok: true, picked: target.id };
-  const exact = T.alias.get(q);
+function judgeTyped(input, q) {
+  const target = q.it, qn = norm(input);
+  if (!qn) return null;
+  if (T.def.kind !== "neighbors" && [target.ans, ...target.alts].some(a => norm(a) === qn)) return { ok: true, picked: target.id };
+  const exact = T.alias.get(qn);
   if (exact) {
+    for (const id of exact) if (q.ok.has(id)) return { ok: true, picked: id };
     const id = [...exact][0];
     if (T.def.id === "flags" && TWINS[target.id] === id) return { ok: true, picked: id, twin: true };
     return { ok: false, picked: id };
   }
   let bestD = Infinity, bestIds = null, tie = false;
   for (const [k, ids] of T.alias) {
-    if (Math.abs(k.length - q.length) > 2) continue;
-    const d = lev(q, k);
+    if (Math.abs(k.length - qn.length) > 2) continue;
+    const d = lev(qn, k);
     if (d < bestD) { bestD = d; bestIds = ids; tie = false; }
     else if (d === bestD && ids !== bestIds) tie = true;
   }
-  const tol = q.length >= 9 ? 2 : q.length >= 5 ? 1 : 0;
+  const tol = qn.length >= 9 ? 2 : qn.length >= 5 ? 1 : 0;
   if (bestIds && bestD <= tol && !tie) {
-    const ok = bestIds.has(target.id);
-    return { ok, picked: ok ? target.id : [...bestIds][0], typo: true };
+    const hit = [...bestIds].find(id => q.ok.has(id));
+    return hit ? { ok: true, picked: hit, typo: true } : { ok: false, picked: [...bestIds][0], typo: true };
   }
   return { ok: false, picked: null };
 }
 
-/* ---------- helpers ---------- */
-const $ = s => document.querySelector(s);
-const esc = s => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
-function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
-const pick = a => a[Math.floor(Math.random() * a.length)];
-const fmtTime = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
-const img = (id, alt = "") => `<img class="flag" src="${T.img[id]}" alt="${esc(alt)}" draggable="false">`;
-const minis = ids => `<div class="minis">${ids.filter(k => T.byId[k]).map(k => `<figure>${img(k, "Flag of " + T.byId[k].label)}<figcaption>${esc(T.byId[k].label)}</figcaption></figure>`).join("")}</div>`;
+/* ---------- visuals ---------- */
+const img = (id, alt = "") => T.img[id] ? `<img class="flag" src="${T.img[id]}" alt="${esc(alt)}" draggable="false">` : `<div class="flag noflag" aria-hidden="true"></div>`;
+const minis = ids => `<div class="minis">${ids.filter(k => T.byId[k] || T.rowById[k]).map(k => `<figure>${img(k, "Flag of " + nameOf(k))}<figcaption>${esc(nameOf(k))}</figcaption></figure>`).join("")}</div>`;
+function shapeSVG(id, cls = "shape") {
+  const m = MAPS[T.def.set], info = m.data.info[id];
+  const [x0, y0, x1, y1] = info.b, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  let w = (x1 - x0) * 1.12, h = (y1 - y0) * 1.12;
+  if (w / h < 4 / 3) w = h * 4 / 3; else h = w * 3 / 4;
+  const d = (m.dByCode[id] || []).join(" ");
+  return `<svg class="${cls}" viewBox="${(cx - w / 2).toFixed(1)} ${(cy - h / 2).toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}" role="img" aria-label="Outline"><path d="${d}"/></svg>`;
+}
+const textTile = (t, cls = "qtext") => `<div class="${cls}">${esc(t)}</div>`;
 
 /* ---------- sound (off by default) ---------- */
 let actx = null;
@@ -210,16 +295,22 @@ document.addEventListener("keydown", e => {
 menu.addEventListener("click", e => { if (e.target.closest("a[href^='#']")) setPop(null, false); });
 
 const CHECK = `<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
-$("#topicList").innerHTML = TOPICS.map(t => `<a href="#${t.id}-practice" data-topic="${t.id}">${esc(t.name)}${CHECK}</a>`).join("");
+function renderTopicMenu() {
+  const groups = [...new Set(TOPICS.map(t => t.group))];
+  $("#topicList").innerHTML = groups.map(g => `<div class="menu-group">${esc(g)}</div>` +
+    TOPICS.filter(t => t.group === g).map(t => `<a href="#${t.id}-practice" data-topic="${t.id}">${esc(t.name)}${CHECK}</a>`).join("")).join("");
+}
+renderTopicMenu();
 
 function renderSettings() {
   const def = T.def, p = T.pref;
   $("#menuLabel").textContent = def.name;
   document.querySelectorAll("#topicList a").forEach(a => {
-    a.href = `#${a.dataset.topic}-${state.view}`;
-    if (a.dataset.topic === def.id) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
+    const t = TOPIC[a.dataset.topic];
+    a.href = `#${t.id}-${t.modes.includes(state.view) ? state.view : "practice"}`;
+    if (t.id === def.id) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
   });
-  document.querySelectorAll("#modeNav a").forEach(a => { a.href = `#${def.id}-${a.dataset.view}`; });
+  document.querySelectorAll("#modeNav a").forEach(a => { a.href = `#${def.id}-${a.dataset.view}`; a.hidden = !def.modes.includes(a.dataset.view); });
   $("#setTopic").textContent = `for ${def.name}`;
   $("#regionSel").innerHTML = def.regions.map(r => {
     const n = T.items.filter(it => kindOk(it) && (r === "All" || it.r === r)).length;
@@ -229,6 +320,7 @@ function renderSettings() {
   $("#terrRow").hidden = !def.terr;
   $("#terrToggle").checked = p.terr;
   $("#soundToggle").checked = settings.sound;
+  $("#styleSeg").parentElement.hidden = def.styles.length < 2;
   $("#styleSeg").querySelectorAll("[data-style]").forEach(b => {
     b.hidden = !def.styles.includes(b.dataset.style);
     b.setAttribute("aria-pressed", b.dataset.style === p.style);
@@ -262,17 +354,23 @@ $("#resetBtn").addEventListener("click", e => {
 });
 
 function updateMeter() {
+  if (T.def.kind === "compare") {
+    const best = T.prog.best.streak || 0;
+    $("#meterText").innerHTML = `Best streak <b>${best}</b>`;
+    $("#meterFill").style.width = Math.min(100, best * 5) + "%";
+    return;
+  }
   const P = pool(); let m = 0;
   P.forEach(it => { if (status(it.id) === "mastered") m++; });
-  $("#meterNum").textContent = m; $("#meterTot").textContent = P.length; $("#meterUnit").textContent = T.def.unit;
+  $("#meterText").innerHTML = `<b>${m}</b> of ${P.length} ${esc(T.def.unit)} learned`;
   $("#meterFill").style.width = (100 * m / Math.max(1, P.length)) + "%";
 }
 
-/* ---------- answer map (zoom, pan, hover names) ---------- */
-const MAPS = {}; // set name -> { data, svg, byCode, hits, rings, loading }
+/* ---------- map (zoom, pan, hover names, click to answer) ---------- */
+const MAPS = {}; // set name -> { data, svg, byCode, dByCode, dots, rings, loading }
 const SVGNS = "http://www.w3.org/2000/svg";
 function loadMap(setName) {
-  const m = MAPS[setName] || (MAPS[setName] = { data: null, svg: null, hits: [], loading: null });
+  const m = MAPS[setName] || (MAPS[setName] = { data: null, svg: null, marks: [], loading: null });
   if (!m.loading) m.loading = fetch(SETS[setName].map).then(r => { if (!r.ok) throw new Error("map"); return r.json(); }).then(data => {
     m.data = data;
     const svg = document.createElementNS(SVGNS, "svg");
@@ -281,24 +379,35 @@ function loadMap(setName) {
     svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
     svg.setAttribute("aria-hidden", "true");
     const g = document.createElementNS(SVGNS, "g");
-    m.byCode = {};
+    m.byCode = {}; m.dByCode = {};
     for (const sh of data.shapes) {
       const path = document.createElementNS(SVGNS, "path");
       path.setAttribute("d", sh.d);
-      if (sh.c) { path.dataset.c = sh.c; (m.byCode[sh.c] = m.byCode[sh.c] || []).push(path); }
+      if (sh.c) { path.dataset.c = sh.c; (m.byCode[sh.c] = m.byCode[sh.c] || []).push(path); (m.dByCode[sh.c] = m.dByCode[sh.c] || []).push(sh.d); }
       g.appendChild(path);
     }
     svg.appendChild(g);
+    // Clickable dots for places too small to click (shown only in "find it on the map")
+    const dg = document.createElementNS(SVGNS, "g"); dg.setAttribute("class", "dots");
+    m.dots = [];
+    const tinyW = data.vb[2] * 0.004;
+    for (const [code, info] of Object.entries(data.info)) {
+      const b = info.b;
+      if (b[2] - b[0] > tinyW || b[3] - b[1] > tinyW) continue;
+      const c = document.createElementNS(SVGNS, "circle");
+      c.setAttribute("cx", info.p[0]); c.setAttribute("cy", info.p[1]); c.dataset.c = code; c.setAttribute("class", "dot");
+      dg.appendChild(c); m.dots.push(c); (m.byCode[code] = m.byCode[code] || []).push(c);
+    }
+    svg.appendChild(dg);
     m.rings = ["ring hit", "ring miss"].map(cls => { const c = document.createElementNS(SVGNS, "circle"); c.setAttribute("class", cls); c.style.display = "none"; svg.appendChild(c); return c; });
     m.svg = svg;
     return m;
   }).catch(e => { m.loading = null; throw e; });
   return m.loading;
 }
-// A view that shows the answer (and the wrong pick, if any) with some context around it.
 function frameFor(data, ids, aspect, padK = 1.8) {
   const boxes = ids.map(id => data.info[id]).filter(Boolean).map(i => i.b);
-  if (!boxes.length) return data.vb.slice();
+  if (!boxes.length) return fullFrame(data, aspect);
   const x0 = Math.min(...boxes.map(b => b[0])), y0 = Math.min(...boxes.map(b => b[1]));
   const x1 = Math.max(...boxes.map(b => b[2])), y1 = Math.max(...boxes.map(b => b[3]));
   const [vx, vy, vw, vh] = data.vb;
@@ -313,31 +422,42 @@ function frameFor(data, ids, aspect, padK = 1.8) {
   y = Math.min(Math.max(y, vy - h * 0.1), vy + vh - h * 0.9);
   return [x, y, w, h];
 }
+function fullFrame(data, aspect) {
+  let [x, y, w, h] = data.vb;
+  if (w / h < aspect) { const nw = h * aspect; x -= (nw - w) / 2; w = nw; } else { const nh = w / aspect; y -= (nh - h) / 2; h = nh; }
+  return [x, y, w, h];
+}
 const MAP_CONTROLS = `<div class="map-ctrl" role="group" aria-label="Map zoom">
   <button type="button" data-z="in" aria-label="Zoom in"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
   <button type="button" data-z="out" aria-label="Zoom out"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
   <button type="button" data-z="fit" aria-label="Back to the answer"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
 </div><div class="map-tip" hidden></div>`;
 
-async function showMap(container, targetId, pickedId) {
+/* Puts the shared map into a container and returns a controller:
+   ctl.mark({hit, hit2, miss}), ctl.focus(ids), ctl.pick = fn(code) to answer by clicking, ctl.tips = show names on hover. */
+async function mountMap(container, { pick = null, tips = true, dots = false } = {}) {
   let m;
-  try { m = await loadMap(T.def.set); } catch (e) { container.remove(); return; }
-  if (!container.isConnected) return;
+  try { m = await loadMap(T.def.set); } catch (e) { container.remove(); return null; }
+  if (!container.isConnected) return null;
   const { data, svg } = m;
-  m.hits.forEach(p => p.classList.remove("hit", "miss")); m.hits = [];
-  const mark = (id, cls) => (m.byCode[id] || []).forEach(p => { p.classList.add(cls); m.hits.push(p); p.parentNode.appendChild(p); });
-  if (pickedId) mark(pickedId, "miss");
-  mark(targetId, "hit");
+  m.marks.forEach(el => el.classList.remove("hit", "hit2", "miss")); m.marks = [];
+  svg.classList.toggle("show-dots", dots);
   container.insertBefore(svg, container.firstChild);
-  const aspect = container.clientWidth / Math.max(1, container.clientHeight) || 2;
-  const fit = frameFor(data, pickedId ? [targetId, pickedId] : [targetId], aspect);
-  let vb = fit.slice(), anim = 0;
-  const [, , fullW] = data.vb;
+  const aspect = () => container.clientWidth / Math.max(1, container.clientHeight) || 2;
+  const fullW = data.vb[2];
+  let vb = data.vb.slice(), anim = 0, ringIds = [null, null], disposed = false;
+  const ctl = { pick, tips, fit: null };
+  // The map element is shared: stop whatever the previous question's map was doing
+  if (m.ctl) m.ctl.dispose();
+  m.ctl = ctl;
+  ctl.dispose = () => { disposed = true; cancelAnimationFrame(anim); };
   const setVB = v => {
+    if (disposed) return;
     vb = v;
     svg.setAttribute("viewBox", v.join(" "));
-    // Small places get a ring sized to the current zoom so they stay easy to spot.
-    [[targetId, 0], [pickedId, 1]].forEach(([id, i]) => {
+    const r = v[2] * 0.006;
+    if (dots) m.dots.forEach(c => c.setAttribute("r", r));
+    ringIds.forEach((id, i) => {
       const ring = m.rings[i], info = id && data.info[id], b = info && info.b;
       const small = b && (b[2] - b[0] < v[2] * 0.04 && b[3] - b[1] < v[3] * 0.04);
       ring.style.display = small ? "" : "none";
@@ -356,51 +476,64 @@ async function showMap(container, targetId, pickedId) {
     anim = requestAnimationFrame(step);
   };
   const zoomAt = (k, fx = 0.5, fy = 0.5, smooth = false) => {
-    const w = Math.min(fullW * 1.2, Math.max(fullW * 0.015, vb[2] * k)), h = w / (vb[2] / vb[3]);
+    const w = Math.min(fullW * 1.3, Math.max(fullW * 0.012, vb[2] * k)), h = w / (vb[2] / vb[3]);
     const px = vb[0] + fx * vb[2], py = vb[1] + fy * vb[3];
     const next = [px - fx * w, py - fy * h, w, h];
     smooth ? animateTo(next, 250) : (cancelAnimationFrame(anim), setVB(next));
   };
-  // Fly in: start a few times wider than the answer frame
-  setVB([fit[0] - fit[2], fit[1] - fit[3], fit[2] * 3, fit[3] * 3]);
-  animateTo(fit, 650);
+  // Starting view: the selected region, or the whole map
+  const regionIds = T.pref.region === "All" ? [] : pool().map(it => it.id).filter(id => { const b = data.info[id] && data.info[id].b; return b && b[2] - b[0] < fullW * 0.3; });
+  ctl.fit = regionIds.length ? frameFor(data, regionIds, aspect(), 1.15) : fullFrame(data, aspect());
+  setVB(ctl.fit);
 
-  // Controls (re-bound each answer; the container is new each time)
+  ctl.mark = ({ hit = [], hit2 = [], miss = [] }) => {
+    m.marks.forEach(el => el.classList.remove("hit", "hit2", "miss")); m.marks = [];
+    const add = (id, cls) => (m.byCode[id] || []).forEach(el => { el.classList.add(cls); m.marks.push(el); if (el.tagName === "path") el.parentNode.appendChild(el); });
+    hit2.forEach(id => add(id, "hit2")); miss.forEach(id => add(id, "miss")); hit.forEach(id => add(id, "hit"));
+    ringIds = [hit[0] || null, miss[0] || null];
+    setVB(vb);
+  };
+  ctl.focus = (ids, fly = true) => {
+    const f = frameFor(data, ids, aspect());
+    ctl.fit = f;
+    if (fly && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const wide = [f[0] - f[2], f[1] - f[3], f[2] * 3, f[3] * 3];
+      if (vb[2] < wide[2]) setVB(wide);
+      animateTo(f, 650);
+    } else animateTo(f);
+  };
+
   container.querySelector(".map-ctrl").addEventListener("click", e => {
     const bt = e.target.closest("[data-z]"); if (!bt) return;
     if (bt.dataset.z === "in") zoomAt(1 / 1.6, .5, .5, true);
     else if (bt.dataset.z === "out") zoomAt(1.6, .5, .5, true);
-    else animateTo(fit);
+    else animateTo(ctl.fit);
   });
   const rel = e => { const r = svg.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
-  container.addEventListener("wheel", e => {
-    e.preventDefault();
-    const [fx, fy] = rel(e);
-    zoomAt(Math.exp(e.deltaY * 0.0015), fx, fy);
-  }, { passive: false });
-  // Drag to pan, pinch to zoom
-  const pts = new Map(); let pinch0 = 0;
+  container.addEventListener("wheel", e => { e.preventDefault(); const [fx, fy] = rel(e); zoomAt(Math.exp(e.deltaY * 0.0015), fx, fy); }, { passive: false });
+  const pts = new Map(); let pinch0 = 0, moved = 0, downAt = null;
   container.addEventListener("pointerdown", e => {
     if (e.target.closest(".map-ctrl")) return;
     container.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
     cancelAnimationFrame(anim); container.classList.add("dragging");
-    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); }
+    if (pts.size === 1) { moved = 0; downAt = [e.clientX, e.clientY]; }
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); moved = 99; }
   });
   container.addEventListener("pointermove", e => {
     const tip = container.querySelector(".map-tip");
     if (!pts.has(e.pointerId)) {
-      // Hover: show the name of the place under the cursor
-      const el = e.target.closest && e.target.closest("path[data-c]");
-      const it = el && T.byId[el.dataset.c];
-      if (it && e.pointerType === "mouse") {
+      const el = e.target.closest && e.target.closest("[data-c]");
+      const name = el && ctl.tips && nameOf(el.dataset.c);
+      if (name && e.pointerType === "mouse") {
         const r = container.getBoundingClientRect();
-        tip.textContent = it.label; tip.hidden = false;
+        tip.textContent = name; tip.hidden = false;
         tip.style.left = (e.clientX - r.left + 12) + "px"; tip.style.top = (e.clientY - r.top + 12) + "px";
       } else tip.hidden = true;
       return;
     }
     tip.hidden = true;
     const prev = pts.get(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (downAt) moved = Math.max(moved, Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]));
     const r = svg.getBoundingClientRect();
     if (pts.size === 1) {
       const scale = Math.max(vb[2] / r.width, vb[3] / r.height);
@@ -411,22 +544,40 @@ async function showMap(container, targetId, pickedId) {
       zoomAt(pinch0 / d, fx, fy); pinch0 = d;
     }
   });
-  const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch0 = 0; if (!pts.size) container.classList.remove("dragging"); };
+  const up = e => {
+    const wasTap = pts.size === 1 && pts.has(e.pointerId) && moved < 6;
+    pts.delete(e.pointerId); if (pts.size < 2) pinch0 = 0; if (!pts.size) container.classList.remove("dragging");
+    if (wasTap && ctl.pick && e.type === "pointerup") {
+      const el = document.elementsFromPoint(e.clientX, e.clientY).map(x => x.closest && x.closest("[data-c]")).find(Boolean);
+      if (el) ctl.pick(el.dataset.c);
+    }
+  };
   container.addEventListener("pointerup", up); container.addEventListener("pointercancel", up);
   container.addEventListener("pointerleave", () => { const tip = container.querySelector(".map-tip"); if (tip) tip.hidden = true; });
+  return ctl;
 }
 
 /* ---------- question engine ---------- */
-function distractors(target, n) {
-  const ex = new Set([target.id]); if (T.def.id === "flags" && TWINS[target.id]) ex.add(TWINS[target.id]);
-  const answers = new Set([norm(target.ans)]);
+function optLabelFn(target) {
+  const def = T.def;
+  if (def.multi) {
+    const own = new Set(target.vals.map(norm)), first = pick(target.vals);
+    return o => o.id === target.id ? first : (o.vals.find(v => !own.has(norm(v))) || null);
+  }
+  return o => o.ans;
+}
+function distractors(target, n, label, exclude = new Set()) {
+  const ex = new Set([target.id, ...exclude]); if (T.def.id === "flags" && TWINS[target.id]) ex.add(TWINS[target.id]);
+  const used = new Set([target.ans, ...target.alts].map(norm));
+  if (T.def.multi) target.vals.forEach(v => used.add(norm(v)));
   const out = [];
   const add = (arr, cap) => {
     let k = 0;
     for (const x of shuffle(arr)) {
       if (out.length >= n || k >= cap) break;
-      if (ex.has(x.id) || !kindOk(x) || answers.has(norm(x.ans))) continue;
-      out.push(x); k++; ex.add(x.id); answers.add(norm(x.ans));
+      if (ex.has(x.id) || !kindOk(x)) continue;
+      const l = label(x); if (!l || used.has(norm(l))) continue;
+      out.push(x); k++; ex.add(x.id); used.add(norm(l));
       if (T.def.id === "flags" && TWINS[x.id]) ex.add(TWINS[x.id]);
     }
   };
@@ -436,27 +587,51 @@ function distractors(target, n) {
   add(T.items, 3);
   return out;
 }
-function makeQuestion(item, style) {
-  const q = { it: item, style };
-  if (style !== "type") q.options = shuffle([item, ...distractors(item, 3)]);
+function makeQuestion(it, style) {
+  const def = T.def, q = { it, style, ok: new Set([it.id]) };
+  if (def.kind === "neighbors") q.ok = new Set(it.nb);
+  if (style === "choice" || style === "reverse") {
+    let label = optLabelFn(it), opts;
+    if (def.kind === "neighbors") {
+      const right = pick(it.nb.filter(id => T.rowById[id]));
+      const rightItem = T.byId[right] || { id: right, ans: nameOf(right), alts: [], r: it.r, sr: it.sr };
+      opts = [rightItem, ...distractors(it, 3, o => o.ans, new Set(it.nb))];
+    } else opts = [it, ...distractors(it, 3, label)];
+    q.options = shuffle(opts);
+    q.labels = Object.fromEntries(q.options.map(o => [o.id, label(o)]));
+  }
   return q;
 }
+function makeCompare(a, b) {
+  const win = a.val >= b.val ? a : b;
+  return { compare: true, a, b, it: win, ok: new Set([win.id]), style: "pair" };
+}
+// Picks an opponent with a similar value most of the time, so it isn't always obvious
+function compareOpponent(a, P) {
+  const close = P.filter(x => x.id !== a.id && x.val / a.val > 0.4 && x.val / a.val < 2.5 && Math.abs(x.val - a.val) / Math.max(x.val, a.val) > 0.03);
+  const any = P.filter(x => x.id !== a.id && Math.abs(x.val - a.val) / Math.max(x.val, a.val) > 0.03);
+  return (Math.random() < 0.7 && close.length ? pick(close) : pick(any));
+}
 
-/* Draws one question into host. top: optional HTML above the question. below: text under the answers before answering.
-   Layout is one stacked column: before answering, a big flag and the answers; after answering, the flag shrinks
-   and the map and feedback appear underneath, all within one screen on desktop. */
+/* Draws one question into host (one stacked column; fits one screen on desktop). */
 function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextLabel = "Next" }) {
   const it = q.it, def = T.def;
-  let answered = false;
-  let h = top + `<div class="q-stack">`;
-  if (q.style === "reverse") {
+  let answered = false, mapCtl = null;
+  let h = top + `<div class="q-stack kind-${def.kind}${q.style === "map" ? " locate" : ""}">`;
+  if (q.compare) {
+    h += `<div class="q-head"><p class="prompt">${esc(def.ask)}</p></div><div class="pair">${[q.a, q.b].map((o, i) => `<button type="button" class="pair-card" data-id="${o.id}"><span class="kbd">${i + 1}</span>${img(o.id, "Flag of " + o.label)}<b>${esc(o.label)}</b><span class="val" aria-live="polite"></span></button>`).join("")}</div>`;
+  } else if (q.style === "map") {
+    h += `<div class="q-head"><p class="prompt">${esc(def.ask)}</p><div class="qname">${esc(it.label)}</div></div><figure class="map main" data-map>${MAP_CONTROLS}<figcaption class="map-key"><span>Click it on the map. Scroll or use + to zoom.</span></figcaption></figure>`;
+  } else if (q.style === "reverse") {
     h += `<div class="q-head"><p class="prompt">${esc(def.find)}</p><div class="qname">${esc(it.ans)}</div></div>
       <div class="flag-answers">${q.options.map((o, i) => `<button type="button" class="flag-answer" data-id="${o.id}" aria-label="Option ${i + 1}">${img(o.id)}<span class="cap"></span></button>`).join("")}</div>`;
   } else {
     if (def.kind === "flag") h += `<div class="q-head"><div class="qflag">${img(it.id, "Mystery flag")}</div><p class="prompt">${esc(def.ask)}</p></div>`;
+    else if (def.kind === "shape") h += `<div class="q-head"><div class="qflag qshape">${shapeSVG(it.id)}</div><p class="prompt">${esc(def.ask)}</p></div>`;
+    else if (def.kind === "text") h += `<div class="q-head">${textTile(it.q)}<p class="prompt">${esc(def.ask)}</p></div>`;
     else h += `<div class="q-head"><div class="qflag small">${img(it.id, "Flag of " + it.label)}</div><div class="qname">${esc(it.label)}</div><p class="prompt">${esc(def.ask)}</p></div>`;
     if (q.style === "choice") {
-      h += `<div class="answers">${q.options.map(o => `<button type="button" class="answer" data-id="${o.id}">${esc(o.ans)}</button>`).join("")}</div>`;
+      h += `<div class="answers">${q.options.map(o => `<button type="button" class="answer" data-id="${o.id}">${esc(q.labels[o.id])}</button>`).join("")}</div>`;
     } else {
       h += `<form class="type-row" autocomplete="off"><input id="typeIn" type="text" placeholder="${esc(def.typeHolder)}" aria-label="${esc(def.typeHolder)}" autocapitalize="off" spellcheck="false"><button class="btn primary" type="submit">Check</button><button class="btn" type="button" data-skip>Skip</button></form>`;
     }
@@ -465,57 +640,101 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
   host.innerHTML = h;
   const stack = host.querySelector(".q-stack"), belowEl = host.querySelector(".below"), fbEl = host.querySelector(".fb");
 
+  if (q.style === "map") {
+    mountMap(host.querySelector("[data-map]"), { tips: false, dots: true, pick: code => { if (!answered) finish(q.ok.has(code), code, ""); } }).then(c => { mapCtl = c; });
+  }
+
   function finish(ok, picked, note) {
     if (answered) return; answered = true;
     host.querySelectorAll("[data-id]").forEach(b => {
       b.disabled = true;
-      if (b.dataset.id === it.id) b.classList.add("right");
+      if (q.ok.has(b.dataset.id) && (def.kind !== "neighbors" || b.dataset.id === picked || !ok)) b.classList.add("right");
       else if (b.dataset.id === picked) b.classList.add("wrong");
       else if (q.style === "choice") b.classList.add("dim");
       const cap = b.querySelector(".cap"); if (cap) cap.textContent = T.byId[b.dataset.id].ans;
+      const val = b.querySelector(".val"); if (val) val.textContent = fmtVal(def.field, T.byId[b.dataset.id].val);
     });
     const inp = host.querySelector("#typeIn");
     if (inp) { inp.disabled = true; inp.classList.add(ok ? "right" : "wrong"); host.querySelectorAll(".type-row button").forEach(b => b.disabled = true); }
     sfx(ok);
-    const p = picked && picked !== it.id ? T.byId[picked] : null;
-    let lines = ok ? `<span class="result-line good">Correct, it's ${esc(it.ans)}.</span>`
-                   : `<span class="result-line bad">It's ${esc(it.ans)}.${p ? ` You picked ${esc(p.ans)}.` : ""}</span>`;
-    let sub = esc(it.fact) + (it.k === "territory" ? " · Territory" : "");
-    if (!ok && p && def.kind === "capital") sub += ` · ${esc(p.ans)} is the capital of ${esc(p.label)}`;
-    if (note) sub += ` · ${esc(note)}`;
-    let tip = "";
-    if (!ok && def.kind === "flag") {
-      const gs = def.groups ? (groupsOf[it.id] || []) : [];
-      const g = (p && gs.find(x => x.codes.includes(p.id))) || gs[0];
-      if (g) tip = `<div class="tip">${minis(g.codes)}<div><b>${esc(g.t)}.</b> ${esc(g.tip)}</div></div>`;
-      else if (p) tip = `<div class="tip">${minis([it.id, p.id])}<div><b>Side by side.</b> Compare the two flags.</div></div>`;
+    const p = picked && !(ok && picked === it.id) ? picked : null;
+    const pLabel = p && ((q.labels && q.labels[p]) || nameOf(p));
+    let line, sub = esc(it.fact) + (it.k === "territory" ? " · Territory" : ""), marks, key;
+    if (q.compare) {
+      const lose = q.a.id === it.id ? q.b : q.a;
+      line = ok ? `Correct, ${esc(it.label)} ${esc(def.verb)}.` : `${esc(it.label)} ${esc(def.verb)}.`;
+      sub = `${esc(q.a.label)}: ${fmtVal(def.field, q.a.val)} · ${esc(q.b.label)}: ${fmtVal(def.field, q.b.val)}`;
+      if (def.field === "pop") sub += ` · World Bank ${T.byId[it.id].row.popY || ""}`;
+      marks = { hit: [it.id], hit2: ok ? [lose.id] : [], miss: ok ? [] : [lose.id] };
+      key = [[it.id, "hit", def.field === "area" ? "Bigger" : "More people"], [lose.id, ok ? "hit2" : "miss", ""]];
+    } else if (def.kind === "neighbors") {
+      const nbNames = it.nb.map(nameOf);
+      line = ok ? `Yes, ${esc(pLabel)} borders ${esc(it.label)}.` : (p ? `${esc(pLabel)} doesn't border ${esc(it.label)}.` : `${esc(it.label)}'s neighbors are shown in light blue.`);
+      sub = `${esc(it.label)} borders ${esc(listJoin(nbNames))}${note ? " · " + esc(note) : ""}`;
+      marks = { hit: [it.id], hit2: it.nb, miss: ok || !p ? [] : [p] };
+      key = [[it.id, "hit", ""], [it.nb[0], "hit2", "Neighbors"]].concat(!ok && p ? [[p, "miss", "your pick"]] : []);
+    } else if (def.kind === "locate") {
+      line = ok ? `Correct, that's ${esc(it.label)}.` : (p ? `That's ${esc(pLabel)}. ${esc(it.label)} is in blue.` : `${esc(it.label)} is in blue.`);
+      marks = { hit: [it.id], miss: p && !ok ? [p] : [] };
+      key = [[it.id, "hit", ""]].concat(p && !ok ? [[p, "miss", "your pick"]] : []);
+    } else {
+      line = ok ? `Correct, it's ${esc(it.ans)}.` : `It's ${esc(it.ans)}.${p ? ` You picked ${esc(pLabel)}.` : ""}`;
+      if (!ok && p && def.kind === "fact" && def.field === "cap" && T.byId[p]) sub += ` · ${esc(T.byId[p].ans)} is the capital of ${esc(T.byId[p].label)}`;
+      if (!ok && p && def.kind === "text" && T.byId[p]) sub += ` · ${def.field === "code" ? `${esc(T.byId[p].q)} is ${esc(T.byId[p].label)}` : `${esc(T.byId[p].label)}'s capital is ${esc(T.byId[p].q)}`}`;
+      const showPick = p && !ok && def.mapPick !== false && T.rowById[p];
+      marks = { hit: [it.id], miss: showPick ? [p] : [] };
+      key = [[it.id, "hit", ""]].concat(showPick ? [[p, "miss", "your pick"]] : []);
     }
-    const key = p ? `<span><i class="k hit"></i>${esc(it.label)}</span><span><i class="k miss"></i>${esc(p.label)} (your pick)</span>` : `<span><i class="k hit"></i>${esc(it.label)}</span>`;
+    if (note && def.kind !== "neighbors") sub += ` · ${esc(note)}`;
+    let tip = "";
+    if (!ok && (def.kind === "flag" || def.kind === "shape") && !q.compare) {
+      const gs = def.groups ? (groupsOf[it.id] || []) : [];
+      const g = (p && gs.find(x => x.codes.includes(p))) || gs[0];
+      if (g && def.kind === "flag") tip = `<div class="tip">${minis(g.codes)}<div><b>${esc(g.t)}.</b> ${esc(g.tip)}</div></div>`;
+      else if (p && T.byId[p] && def.kind === "flag") tip = `<div class="tip">${minis([it.id, p])}<div><b>Side by side.</b> Compare the two flags.</div></div>`;
+      else if (p && T.byId[p] && def.kind === "shape") tip = `<div class="tip"><div class="minis">${[it.id, p].map(k => `<figure>${shapeSVG(k, "mini-shape")}<figcaption>${esc(nameOf(k))}</figcaption></figure>`).join("")}</div><div><b>Side by side.</b> Compare the two outlines.</div></div>`;
+    }
+    const keyHTML = key.filter(k => k[0]).map(([id, cls, extra]) => `<span><i class="k ${cls}"></i>${esc(extra && cls === "hit2" ? extra : nameOf(id))}${extra && cls !== "hit2" ? ` (${esc(extra)})` : ""}</span>`).join("");
     belowEl.textContent = "";
-    fbEl.innerHTML = `<div class="result"><div class="result-text">${lines}<span class="result-sub">${sub}</span></div>
-      <div class="next-row"><span class="kbd-hint">or press <span class="kbd">Enter</span></span><button type="button" class="btn primary" data-next>${nextLabel}</button></div></div>
-      <figure class="map" data-map>${MAP_CONTROLS}<figcaption class="map-key">${key}</figcaption></figure>${tip}`;
+    const resultRow = `<div class="result"><div class="result-text"><span class="result-line ${ok ? "good" : "bad"}">${line}</span><span class="result-sub">${sub}</span></div>
+      <div class="next-row"><span class="kbd-hint">or press <span class="kbd">Enter</span></span><button type="button" class="btn primary" data-next>${nextLabel}</button></div></div>`;
+    if (q.style === "map") {
+      fbEl.innerHTML = resultRow;
+      const mapEl = host.querySelector("[data-map]");
+      mapEl.querySelector(".map-key").innerHTML = keyHTML;
+      const apply = c => { if (!c) return; c.pick = null; c.tips = true; c.mark(marks); c.focus(marks.miss.length ? [it.id, ...marks.miss] : [it.id]); };
+      if (mapCtl) apply(mapCtl); else setTimeout(() => apply(mapCtl), 300);
+    } else {
+      fbEl.innerHTML = resultRow + `<figure class="map" data-map>${MAP_CONTROLS}<figcaption class="map-key">${keyHTML}</figcaption></figure>${tip}`;
+      mountMap(fbEl.querySelector("[data-map]")).then(c => {
+        if (!c) return;
+        c.mark(marks);
+        const ids = def.kind === "neighbors" ? [it.id, ...it.nb, ...marks.miss] : [...marks.hit, ...(marks.hit2 || []), ...marks.miss];
+        c.focus(ids);
+      });
+    }
     stack.classList.add("answered");
-    showMap(fbEl.querySelector("[data-map]"), it.id, p ? p.id : null);
     onAnswer(ok, picked);
     const nb = host.querySelector("[data-next]");
     nb.addEventListener("click", onNext);
     nb.focus({ preventScroll: true });
   }
 
-  host.querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", () => finish(b.dataset.id === it.id, b.dataset.id)));
+  host.querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", () => {
+    const id = b.dataset.id; finish(q.ok.has(id), id, "");
+  }));
   const form = host.querySelector("form.type-row");
   if (form) {
     const inp = form.querySelector("input");
     setTimeout(() => inp.focus({ preventScroll: true }), 30);
     form.addEventListener("submit", e => {
       e.preventDefault();
-      const r = judgeTyped(inp.value, it); if (!r) return;
+      const r = judgeTyped(inp.value, q); if (!r) return;
       let note = "";
       if (r.ok && r.twin) note = `${T.byId[r.picked].ans} has an identical flag, so that counts`;
       else if (r.ok && r.typo) note = `accepted "${inp.value.trim()}" as a typo`;
       else if (!r.ok && !r.picked) note = `"${inp.value.trim()}" didn't match any answer`;
-      finish(r.ok, r.ok ? it.id : r.picked, note);
+      finish(r.ok, r.ok ? (def.kind === "neighbors" ? r.picked : it.id) : r.picked, note);
     });
     form.querySelector("[data-skip]").addEventListener("click", () => finish(false, null, ""));
   }
@@ -523,7 +742,7 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
     key(e) {
       if (anyOpen()) return;
       if (e.target.tagName === "INPUT" && !answered) return;
-      if (!answered && /^[1-4]$/.test(e.key) && q.options) {
+      if (!answered && /^[1-4]$/.test(e.key) && (q.options || q.compare)) {
         const b = host.querySelectorAll("[data-id]")[+e.key - 1]; if (b) { b.click(); e.preventDefault(); }
       } else if (answered && e.key === "Enter" && (e.target.tagName !== "BUTTON" || e.target.closest(".map-ctrl"))) {
         e.preventDefault(); onNext();
@@ -550,18 +769,30 @@ const practice = (() => {
     for (let i = 0; i < seen.length; i++) { t -= ws[i]; if (t <= 0) return seen[i]; }
     return seen[seen.length - 1] || pick(P);
   }
-  function ask(it) {
-    current = it; done = false;
-    ctl = renderQuestion(host(), makeQuestion(it, T.pref.style), {
+  function ask(q) {
+    current = q; done = false;
+    const isCompare = !!q.compare;
+    ctl = renderQuestion(host(), q, {
       below: streak ? `Streak ${streak}` : "",
-      onAnswer(ok) { done = true; grade(it.id, ok); streak = ok ? streak + 1 : 0; },
+      onAnswer(ok) {
+        done = true; streak = ok ? streak + 1 : 0;
+        if (isCompare) { if (streak > (T.prog.best.streak || 0)) { T.prog.best.streak = streak; saveProgress(); } updateMeter(); }
+        else grade(q.it.id, ok);
+      },
       onNext: next
     });
   }
-  function next() { const it = choose(); recent.push(it.id); if (recent.length > 8) recent.shift(); ask(it); }
+  function next() {
+    if (T.def.kind === "compare") {
+      const P = pool(), a = pick(P);
+      return ask(makeCompare(a, compareOpponent(a, P)));
+    }
+    const it = choose(); recent.push(it.id); if (recent.length > 8) recent.shift();
+    ask(makeQuestion(it, T.pref.style));
+  }
   return {
     reset() { recent = []; current = null; streak = 0; },
-    restyle() { if (current && !done) ask(current); else current = null; },
+    restyle() { if (current && !done && !current.compare) ask(makeQuestion(current.it, T.pref.style)); else current = null; },
     show() { if (!current) next(); },
     key(e) { ctl && ctl.key(e); }
   };
@@ -574,52 +805,64 @@ const quiz = (() => {
   function setup() {
     stopTimer(); run = null; ctl = null;
     const P = pool();
-    const lens = [10, 20, 50].filter(n => n < P.length).concat([P.length]);
+    const isCompare = T.def.kind === "compare";
+    const lens = isCompare ? [10, 20, 30] : [10, 20, 50].filter(n => n < P.length).concat([P.length]);
     if (!lens.includes(len)) len = lens.includes(20) ? 20 : lens[0];
     const where = T.pref.region === "All" ? (T.def.set === "states" ? "all 50 states" : "the whole world") : T.pref.region;
     host().innerHTML = `<div class="setup">
-      <div><h1>${esc(T.def.name)} quiz</h1><p>From ${esc(where)}. You can change this in settings.</p></div>
-      <div class="field"><span id="lenLbl">How many</span><div class="seg" role="group" aria-labelledby="lenLbl" id="qLen">${lens.map(n => `<button type="button" data-len="${n}" aria-pressed="${n === len}">${n === P.length ? `All ${n}` : n}</button>`).join("")}</div></div>
+      <div><h1>${esc(T.def.name)}</h1><p>A timed quiz, from ${esc(where)}. You can change this in settings.</p></div>
+      <div class="field"><span id="lenLbl">How many</span><div class="seg" role="group" aria-labelledby="lenLbl" id="qLen">${lens.map(n => `<button type="button" data-len="${n}" aria-pressed="${n === len}">${!isCompare && n === P.length ? `All ${n}` : n}</button>`).join("")}</div></div>
       <button class="btn primary" type="button" id="qStart">Start</button>
     </div>`;
     $("#qLen").addEventListener("click", e => { const b = e.target.closest("[data-len]"); if (b) { len = +b.dataset.len; setup(); } });
-    $("#qStart").addEventListener("click", () => start(shuffle(P).slice(0, len)));
+    $("#qStart").addEventListener("click", () => {
+      if (isCompare) { const qs = []; for (let i = 0; i < len; i++) { const a = pick(P); qs.push(makeCompare(a, compareOpponent(a, P))); } start(qs); }
+      else start(shuffle(P).slice(0, len).map(it => makeQuestion(it, T.pref.style)));
+    });
   }
-  function start(items) {
-    run = { items, i: 0, score: 0, misses: [], t0: Date.now() };
+  function start(qs) {
+    run = { qs, i: 0, score: 0, misses: [], t0: Date.now() };
     stopTimer(); timer = setInterval(() => { const el = $("#qTime"); if (el && run) el.textContent = fmtTime((Date.now() - run.t0) / 1000); }, 500);
     ask();
   }
   function stopTimer() { if (timer) clearInterval(timer); timer = null; }
   function ask() {
-    if (run.i >= run.items.length) return results();
-    const it = run.items[run.i], last = run.i === run.items.length - 1;
-    const top = `<div class="qtop"><span>${run.i + 1} / ${run.items.length}</span><span class="qtrack"><span style="width:${100 * run.i / run.items.length}%"></span></span><span id="qTime">${fmtTime((Date.now() - run.t0) / 1000)}</span></div>`;
-    ctl = renderQuestion(host(), makeQuestion(it, T.pref.style), {
+    if (run.i >= run.qs.length) return results();
+    const q = run.qs[run.i], last = run.i === run.qs.length - 1;
+    const top = `<div class="qtop"><span>${run.i + 1} / ${run.qs.length}</span><span class="qtrack"><span style="width:${100 * run.i / run.qs.length}%"></span></span><span id="qTime">${fmtTime((Date.now() - run.t0) / 1000)}</span></div>`;
+    ctl = renderQuestion(host(), q, {
       top, below: `${run.score} correct so far`,
       nextLabel: last ? "See results" : "Next",
       onAnswer(ok, picked) {
-        grade(it.id, ok);
-        if (ok) run.score++; else run.misses.push({ id: it.id, p: picked });
-        host().querySelector(".qtrack span").style.width = (100 * (run.i + 1) / run.items.length) + "%";
+        if (!q.compare) grade(q.it.id, ok);
+        if (ok) run.score++; else run.misses.push({ q, p: picked });
+        host().querySelector(".qtrack span").style.width = (100 * (run.i + 1) / run.qs.length) + "%";
       },
       onNext() { run.i++; ask(); }
     });
   }
   function results() {
     stopTimer(); ctl = null;
-    const secs = (Date.now() - run.t0) / 1000, total = run.items.length, pct = Math.round(100 * run.score / total);
-    const cap = T.def.kind === "capital";
+    const secs = (Date.now() - run.t0) / 1000, total = run.qs.length, pct = Math.round(100 * run.score / total);
+    const def = T.def;
+    const missFig = ({ q, p }) => {
+      const it = q.it;
+      if (q.compare) return `<figure>${img(it.id, "Flag of " + it.label)}<figcaption>${esc(it.label)}<small>${esc(def.verb)} than ${esc((q.a.id === it.id ? q.b : q.a).label)}</small></figcaption></figure>`;
+      const vis = def.kind === "shape" ? shapeSVG(it.id, "mini-shape") : def.kind === "text" ? textTile(it.q, "tile-text") : img(it.id, "Flag of " + it.label);
+      const title = def.kind === "fact" ? `${esc(it.ans)} <span class="of">(${esc(it.label)})</span>` : def.kind === "neighbors" ? esc(it.label) : esc(it.ans);
+      const said = p ? "you said " + esc((q.labels && q.labels[p]) || nameOf(p)) : "skipped";
+      return `<figure>${vis}<figcaption>${title}<small>${said}</small></figcaption></figure>`;
+    };
     host().innerHTML = `<div class="setup">
       <div class="score">${run.score}<small> / ${total}</small></div>
       <p>${pct}% correct in ${fmtTime(secs)}</p>
-      ${run.misses.length ? `<button class="btn primary" type="button" id="qRetry">Retry the ${run.misses.length} you missed</button>` : ""}
+      ${run.misses.length && def.kind !== "compare" ? `<button class="btn primary" type="button" id="qRetry">Retry the ${run.misses.length} you missed</button>` : ""}
       <button class="btn${run.misses.length ? "" : " primary"}" type="button" id="qAgain" style="width:100%">New quiz</button>
     </div>
-    ${run.misses.length ? `<div class="misses">${run.misses.map(m => { const it = T.byId[m.id]; return `<figure>${img(m.id, "Flag of " + it.label)}<figcaption>${cap ? `${esc(it.ans)} <span class="of">(${esc(it.label)})</span>` : esc(it.ans)}<small>${m.p ? "you said " + esc(T.byId[m.p].ans) : "skipped"}</small></figcaption></figure>`; }).join("")}</div>` : ""}`;
-    const missed = run.misses.map(m => T.byId[m.id]);
+    ${run.misses.length ? `<div class="misses">${run.misses.map(missFig).join("")}</div>` : ""}`;
     $("#qAgain").addEventListener("click", setup);
-    const r = $("#qRetry"); if (r) r.addEventListener("click", () => start(shuffle(missed)));
+    const r = $("#qRetry");
+    if (r) r.addEventListener("click", () => start(shuffle(run.misses.map(m => m.q.compare ? makeCompare(m.q.a, m.q.b) : makeQuestion(m.q.it, T.pref.style)))));
   }
   return {
     reset() { run = null; stopTimer(); setup(); },
@@ -628,12 +871,13 @@ const quiz = (() => {
   };
 })();
 
-/* ---------- NAME THEM ALL ---------- */
+/* ---------- NAME THEM (#name-all) ---------- */
 const nameAll = (() => {
   let g = null, timer = null, pending = null;
   const input = $("#naInput");
   function reset() {
     if (timer) clearInterval(timer); timer = null; clearTimeout(pending);
+    if (!T.def.modes.includes("name-all")) { g = null; return; }
     const P = pool();
     const order = {}; T.def.regions.slice(1).forEach(r => order[r] = shuffle(P.filter(it => it.r === r)));
     g = { P, order, found: new Set(), t0: null, done: false, gave: false, ids: new Set(P.map(it => it.id)) };
@@ -653,14 +897,14 @@ const nameAll = (() => {
     $("#naBoard").innerHTML = h;
   }
   function tileHTML(it) {
-    const found = g.found.has(it.id), missed = g.gave && !found, shown = found || missed;
-    const cap = T.def.kind === "capital";
-    return `<div class="tile ${found ? "found" : missed ? "missed" : ""}" data-tile="${it.id}">${img(it.id, cap || shown ? "Flag of " + it.label : "Unnamed flag")}${cap ? `<div class="tile-of">${esc(it.label)}</div>` : ""}<div class="lab">${shown ? esc(it.ans) : "?"}</div></div>`;
+    const found = g.found.has(it.id), missed = g.gave && !found, shown = found || missed, def = T.def;
+    const vis = def.kind === "shape" ? shapeSVG(it.id, "tile-shape") : def.kind === "text" ? textTile(it.q, "tile-text") : img(it.id, def.kind === "fact" || shown ? "Flag of " + it.label : "Unnamed flag");
+    return `<div class="tile ${found ? "found" : missed ? "missed" : ""}" data-tile="${it.id}">${vis}${def.kind === "fact" ? `<div class="tile-of">${esc(it.label)}</div>` : ""}<div class="lab">${shown ? esc(it.ans) : "?"}</div></div>`;
   }
   function banner(msg, good) {
     const best = T.prog.best[poolKey()];
     $("#naBanner").innerHTML = msg ? `<div class="banner ${good ? "good" : ""}">${msg}</div>`
-      : `<p class="na-hint">${esc(T.def.nameHint)} The timer starts with your first letter.${best ? ` Your best: ${fmtTime(best)}.` : ""}</p>`;
+      : `<p class="na-hint">${esc(T.def.nameHint || "Type every answer you can think of.")} The timer starts with your first letter.${best ? ` Your best: ${fmtTime(best)}.` : ""}</p>`;
   }
   function accept(ids) {
     clearTimeout(pending); pending = null;
@@ -692,21 +936,20 @@ const nameAll = (() => {
     }
   }
   input.addEventListener("input", () => {
-    if (g.done) return;
+    if (!g || g.done) return;
     if (!g.t0) { g.t0 = Date.now(); timer = setInterval(() => $("#naTime").textContent = fmtTime((Date.now() - g.t0) / 1000), 500); }
     clearTimeout(pending); pending = null;
     const q = norm(input.value); if (!q) return;
     const ids = T.alias.get(q);
     if (!ids || ![...ids].some(id => !g.found.has(id) && g.ids.has(id))) return;
-    // Wait a moment if this is also the start of another answer still to find (Niger → Nigeria).
     let prefix = false;
     for (const [k, other] of T.alias) {
       if (k.length > q.length && k.startsWith(q) && [...other].some(id => !ids.has(id) && !g.found.has(id) && g.ids.has(id))) { prefix = true; break; }
     }
     if (prefix) pending = setTimeout(() => accept(ids), 1100); else accept(ids);
   });
-  input.addEventListener("keydown", e => { if (e.key === "Enter") { const ids = T.alias.get(norm(input.value)); if (ids) accept(ids); } });
-  $("#naGiveUp").addEventListener("click", () => { if (!g.done) finish(true); });
+  input.addEventListener("keydown", e => { if (e.key === "Enter" && g) { const ids = T.alias.get(norm(input.value)); if (ids) accept(ids); } });
+  $("#naGiveUp").addEventListener("click", () => { if (g && !g.done) finish(true); });
   $("#naRestart").addEventListener("click", () => { reset(); input.focus(); });
   return { reset, show() { if (!g) reset(); setTimeout(() => input.focus({ preventScroll: true }), 30); }, key() {} };
 })();
@@ -717,26 +960,34 @@ const browse = (() => {
   const body = () => $("#browseBody");
   function render() {
     if (!T) return;
-    const cap = T.def.kind === "capital";
-    if (!T.def.groups) tab = "all";
-    $("#brTabs").hidden = !T.def.groups;
+    const def = T.def;
+    if (!def.groups) tab = "all";
+    $("#brTabs").hidden = !def.groups;
     const qs = norm($("#brSearch").value || "");
     const hide = $("#brHide").checked;
     $("#brAll").setAttribute("aria-pressed", tab === "all"); $("#brLook").setAttribute("aria-pressed", tab === "look");
-    if (tab === "all") {
-      const list = pool().filter(it => !qs || [it.label, it.ans, it.cap || "", ...it.alts].some(a => norm(a).includes(qs)));
-      list.sort((a, b) => a.label.localeCompare(b.label));
-      body().innerHTML = list.length ? `<div class="cards">${list.map(it => {
-        const s = status(it.id);
-        const title = cap ? it.label : it.ans, sub = cap ? it.ans : (it.cap || "");
-        return `<button type="button" class="card ${hide ? "hidden" : ""} ${cap ? "cap" : ""}" data-card="${it.id}" aria-label="${hide ? "Hidden answer, click to reveal" : esc(title)}">${img(it.id, hide && !cap ? "" : "Flag of " + it.label)}<span class="nm"><span class="dot ${s}" title="${s}"></span><span>${esc(title)}</span></span><span class="sub">${esc(sub || "–")}</span></button>`;
-      }).join("")}</div>` : `<div class="empty">Nothing matches "${esc($("#brSearch").value)}".</div>`;
-    } else {
+    if (tab === "look") {
       const gs = GROUPS.filter(g => !qs || g.codes.some(k => T.byId[k] && norm(T.byId[k].label).includes(qs)) || norm(g.t).includes(qs));
       body().innerHTML = `<div class="groups">${gs.map(g => `<div class="group"><h3>${esc(g.t)}</h3>${minis(g.codes)}<p>${esc(g.tip)}</p></div>`).join("")}</div>`;
+      return;
     }
+    let list = pool().filter(it => !qs || [it.label, it.ans, it.cap || "", it.q || "", ...it.alts].some(a => norm(a).includes(qs)));
+    if (def.kind === "compare") list.sort((a, b) => b.val - a.val); else list.sort((a, b) => a.label.localeCompare(b.label));
+    const answerFirst = def.kind === "flag" || def.kind === "shape" || def.kind === "text" || def.kind === "compare";
+    body().innerHTML = list.length ? `<div class="cards">${list.map((it, i) => {
+      const s = status(it.id);
+      const vis = def.kind === "shape" ? shapeSVG(it.id, "card-shape") : def.kind === "text" ? textTile(it.q, "card-text") : img(it.id, hide && answerFirst ? "" : "Flag of " + it.label);
+      let title = answerFirst ? it.ans : it.label, sub;
+      if (def.kind === "flag") sub = it.cap || "";
+      else if (def.kind === "compare") { title = `${i + 1}. ${it.label}`; sub = fmtVal(def.field, it.val); }
+      else if (def.kind === "neighbors") sub = "Borders " + listJoin(it.nb.map(nameOf));
+      else if (def.kind === "shape" || def.kind === "text") sub = it.sr;
+      else sub = it.ans;
+      const hideCls = hide ? (answerFirst ? "hidden" : "hidden sub-only") : "";
+      return `<button type="button" class="card ${hideCls}" data-card="${it.id}" aria-label="${hide ? "Hidden answer, click to reveal" : esc(title)}">${vis}<span class="nm">${def.kind === "compare" ? "" : `<span class="dot ${s}" title="${s}"></span>`}<span>${esc(title)}</span></span><span class="sub">${esc(sub || "–")}</span></button>`;
+    }).join("")}</div>` : `<div class="empty">Nothing matches "${esc($("#brSearch").value)}".</div>`;
   }
-  body().addEventListener("click", e => { const c = e.target.closest(".card.hidden"); if (c) { c.classList.remove("hidden"); c.setAttribute("aria-label", T.byId[c.dataset.card].ans); } });
+  body().addEventListener("click", e => { const c = e.target.closest(".card.hidden"); if (c) { c.classList.remove("hidden", "sub-only"); c.setAttribute("aria-label", T.byId[c.dataset.card].ans); } });
   $("#brSearch").addEventListener("input", render);
   $("#brHide").addEventListener("change", render);
   $("#brAll").addEventListener("click", () => { tab = "all"; render(); });
@@ -765,22 +1016,25 @@ function loadSet(name) {
   }).catch(err => { s.loading = null; throw err; });
   return s.loading;
 }
+const needsMap = def => def.kind === "shape" || def.kind === "locate";
 let routeToken = 0;
 async function route() {
-  const { topic, mode } = parseHash();
+  let { topic, mode } = parseHash();
+  const def = TOPIC[topic];
+  if (!def.modes.includes(mode)) { location.replace(`#${topic}-practice`); return; }
   const token = ++routeToken;
   if (!T || T.def.id !== topic) {
     document.querySelectorAll(".view").forEach(s => s.hidden = true);
     $("#loading").hidden = false; $("#loading").textContent = "Loading…";
-    try { await loadSet(TOPIC[topic].set); }
+    try { await loadSet(def.set); if (needsMap(def)) await loadMap(def.set); }
     catch (e) { $("#loading").textContent = "This topic didn't load. Refresh the page to try again."; return; }
     if (token !== routeToken) return;
     settings.topic = topic; saveSettings();
-    T = buildTopic(TOPIC[topic]);
+    T = buildTopic(def);
     state.view = mode;
     renderSettings(); updateMeter();
     practice.reset(); quiz.reset(); nameAll.reset();
-    setTimeout(() => loadMap(TOPIC[topic].set).catch(() => {}), 1200);
+    setTimeout(() => loadMap(def.set).catch(() => {}), 1200);
   }
   $("#loading").hidden = true;
   state.view = mode;
