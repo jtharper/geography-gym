@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Geography Gym</title>
-<meta name="description" content="Geography Gym: practice until you know every country flag in the world. Quiz yourself, or try to name all 197.">
+<meta name="description" content="Geography Gym: practice country flags, world capitals, US state flags and state capitals until you know them all.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/manrope-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script>
@@ -24,7 +24,7 @@
   </a>
   <div class="top-right">
     <div class="progress-mini" aria-live="polite">
-      <span><b id="meterNum">0</b> of <span id="meterTot">0</span> flags learned</span>
+      <span><b id="meterNum">0</b> of <span id="meterTot">0</span> <span id="meterUnit">flags</span> learned</span>
       <span class="bar"><span id="meterFill"></span></span>
     </div>
     <button class="icon-btn" id="themeBtn" type="button" aria-label="Switch to dark mode">
@@ -38,15 +38,19 @@
       </button>
       <div class="menu" id="menu" hidden>
         <div class="menu-sec">
+          <div class="menu-label">Topic</div>
+          <div class="topics" id="topicList"></div>
+        </div>
+        <div class="menu-sec">
           <a href="#practice" data-view="practice"><b>Practice</b><small>Learn at your own pace</small></a>
           <a href="#quiz" data-view="quiz"><b>Quiz</b><small>A timed round with a score</small></a>
           <a href="#name-all" data-view="name-all"><b>Name them all</b><small>Type every country you know</small></a>
-          <a href="#browse" data-view="browse"><b>Browse flags</b><small>Look through all of them</small></a>
+          <a href="#browse" data-view="browse"><b id="browseName">Browse flags</b><small>Look through all of them</small></a>
         </div>
         <div class="menu-sec">
           <label class="menu-label" for="regionSel">Region</label>
           <select id="regionSel"></select>
-          <label class="row-toggle" for="terrToggle"><span>Include territories</span><input type="checkbox" id="terrToggle"></label>
+          <label class="row-toggle" for="terrToggle" id="terrRow"><span>Include territories</span><input type="checkbox" id="terrToggle"></label>
           <div class="menu-label" id="styleLbl">Answer with</div>
           <div class="seg" role="group" aria-labelledby="styleLbl" id="styleSeg">
             <button type="button" data-style="choice">Choices</button>
@@ -80,7 +84,7 @@
   </section>
   <section class="view wide" id="view-browse" hidden>
     <div class="browse-bar">
-      <div class="seg" role="group" aria-label="Show">
+      <div class="seg" role="group" aria-label="Show" id="brTabs">
         <button type="button" id="brAll" aria-pressed="true">All flags</button>
         <button type="button" id="brLook" aria-pressed="false">Look-alikes</button>
       </div>

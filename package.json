@@ -10,7 +10,9 @@
   },
   "devDependencies": {
     "flag-icons": "7.6.0",
+    "region-flags": "1.1.0",
     "svgo": "^4.1.0",
+    "us-state-flags": "1.0.7",
     "world-countries": "^5.1.0"
   }
 }
