@@ -42,7 +42,7 @@ After every answer, a map zooms to the place, highlighted in blue. A wrong pick 
 
 Some topics don't have every mode (for example, map topics have Practice and Quiz only).
 
-The gear button holds the settings for the current topic: region, answer style (choices, typing or picking the flag), territories, sounds and reset. There's also a light/dark toggle. Progress and settings are saved in the browser's `localStorage`.
+The gear button holds the settings for the current topic: region, answer style (choices, typing or picking the flag), territories, sounds and reset. The palette button switches the look: Clean (the default), Clean dark, Pop, Arcade, Explorer, Tropical or Chalkboard. Adding `?look=pop` (or `arcade`, `explorer`, `tropical`, `chalk`, `clean-dark`) to the address opens the site in that look. Progress and settings are saved in the browser's `localStorage`.
 
 Each topic keeps its own progress. To add a topic, add an entry to `TOPICS` at the top of `app.js`. If it needs new data, add it to `scripts/build-data.mjs`.
 
@@ -51,7 +51,8 @@ Each topic keeps its own progress. To add a topic, add an entry to `TOPICS` at t
 ```
 public/              ← the deployed site
   index.html
-  styles.css
+  styles.css         ← the Clean look (light and dark)
+  themes.css         ← the extra looks and the look picker
   app.js             ← all game logic
   data/countries.json, data/flags.json        ← countries and their flags
   data/states.json, data/state-flags.json     ← US states
@@ -96,7 +97,7 @@ Every push to `main` deploys automatically. Pushes to other branches get their o
 
 ## Credits
 
-- Font: [Manrope](https://github.com/sharanda/manrope) (OFL).
+- Fonts: [Manrope](https://github.com/sharanda/manrope), plus Bricolage Grotesque, Silkscreen, Fraunces, Fredoka and Patrick Hand for the extra looks, all self-hosted from [Fontsource](https://fontsource.org) (OFL).
 - Country flags: [flag-icons](https://github.com/lipis/flag-icons) (MIT).
 - Country data (capitals, currencies, languages, domains, phone codes, borders, area): [world-countries](https://github.com/mledoze/countries) (ODbL).
 - Population: World Bank, via [datasets/population](https://github.com/datasets/population) (2025 figures).
