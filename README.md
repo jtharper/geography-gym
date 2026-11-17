@@ -31,12 +31,12 @@ Pick a topic from the menu at the top right. Topics are grouped by tabs.
 - **Review weak spots**: everything you've gotten wrong in any topic, until you get it right twice.
 - **Your stats**: how much you've learned in each topic, how often you're right, and your daily streak.
 
-After every answer, a map zooms to the place, highlighted in blue. A wrong pick is shown in red. You can zoom with the + and − buttons, the scroll wheel or a pinch, and drag to pan. Borders follow international recognition: Crimea is shown as part of Ukraine, Somaliland as part of Somalia, and Northern Cyprus as part of Cyprus.
+In Practice, after every answer, a map zooms to the place, highlighted in blue. A wrong pick is shown in red. You can zoom with the + and − buttons, the scroll wheel or a pinch, and drag to pan. Borders follow international recognition: Crimea is shown as part of Ukraine, Somaliland as part of Somalia, and Northern Cyprus as part of Cyprus.
 
 ## Modes
 
 - **Practice**: endless spaced repetition. Things you miss come back sooner, and an item counts as learned after 3 correct answers in a row.
-- **Quiz**: a timed round of 10, 20, 50 or all of them, with a retry for the ones you missed.
+- **Quiz**: a race against the clock, 10, 20, 50 or all of them. Answers move straight on (no map), the clock shows tenths of a second, and your best score and time are saved for each topic, region, length and answer style. Retry the ones you missed at the end.
 - **Name them**: type every one you can think of. The clock is running.
 - **Browse**: a gallery you can search. Country flags also has a look-alikes section for flags that are easy to mix up.
 
@@ -100,7 +100,7 @@ Before committing a change to the site, run `npm run bump`. It stamps a new vers
 ## Credits
 
 - Fonts: [Manrope](https://github.com/sharanda/manrope), plus Bricolage Grotesque, Silkscreen, Fraunces, Fredoka and Patrick Hand for the extra looks, all self-hosted from [Fontsource](https://fontsource.org) (OFL).
-- Country flags: [flag-icons](https://github.com/lipis/flag-icons) (MIT).
+- Country flags: [flag-icons](https://github.com/lipis/flag-icons) (MIT), except Costa Rica, which uses the state flag with the coat of arms from [niemela/flags](https://github.com/niemela/flags) (Wikimedia Commons, public domain).
 - Country data (capitals, currencies, languages, domains, phone codes, borders, area): [world-countries](https://github.com/mledoze/countries) (ODbL).
 - Population: World Bank, via [datasets/population](https://github.com/datasets/population) (2025 figures).
 - US state and Canadian province flags: [region-flags](https://github.com/fonttools/region-flags) (public domain, from Wikimedia Commons), with Minnesota, Utah and Mississippi from [us-state-flags](https://www.npmjs.com/package/us-state-flags) (ISC).

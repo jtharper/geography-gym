@@ -424,3 +424,11 @@ body.special #modeNav, body.special .gear-wrap { display: none; }
   .stat-row { grid-template-columns: 1fr auto; }
   .stat-row .sbar, .stat-row .acc { display: none; }
 }
+
+/* Quiz: fast answers and best times */
+.flash { font-size: 17px; font-weight: 700; text-align: center; }
+.flash.bad { color: var(--bad); }
+#qTime { color: var(--ink); font-variant-numeric: tabular-nums; min-width: 4.5em; text-align: right; }
+.best-line { color: var(--muted); font-weight: 600; margin: 0; }
+.best-line.new { color: var(--good); }
+.quiz-time b { color: var(--ink); font-variant-numeric: tabular-nums; }

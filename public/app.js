@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611172120";
+const VERSION = "202611172126";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -179,6 +179,7 @@ const esc = s => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;
 function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const fmtTime = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const fmtTenths = s => `${Math.floor(s / 60)}:${(Math.floor(s % 60 * 10) / 10).toFixed(1).padStart(4, "0")}`;
 const listJoin = a => a.length <= 1 ? (a[0] || "") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
 function fmtVal(field, v) {
   if (v == null) return "–";
@@ -711,9 +712,11 @@ function compareOpponent(a, P) {
 }
 
 /* Draws one question into host (one stacked column; fits one screen on desktop). */
-function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextLabel = "Next" }) {
+/* fast: quiz mode. No map or explanation after answering; a short flash, then the next question. */
+function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextLabel = "Next", fast = false }) {
   const it = q.it, def = T.def;
-  let answered = false, mapCtl = null;
+  let answered = false, mapCtl = null, fastTimer = null;
+  const goNext = () => { if (fastTimer === -1) return; clearTimeout(fastTimer); fastTimer = -1; onNext(); };
   let h = top + `<div class="q-stack kind-${def.kind}${q.style === "map" ? " locate" : ""}">`;
   if (q.compare) {
     h += `<div class="q-head"><p class="prompt">${esc(def.ask)}</p></div><div class="pair">${[q.a, q.b].map((o, i) => `<button type="button" class="pair-card" data-id="${o.id}"><span class="kbd">${i + 1}</span>${img(o.id, "Flag of " + o.label)}<b>${esc(o.label)}</b><span class="val" aria-live="polite"></span></button>`).join("")}</div>`;
@@ -758,6 +761,14 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
     const inp = host.querySelector("#typeIn");
     if (inp) { inp.disabled = true; inp.classList.add(ok ? "right" : "wrong"); host.querySelectorAll(".type-row button").forEach(b => b.disabled = true); }
     sfx(ok);
+    if (fast) {
+      // Show the right answer for a moment when wrong, then move on. Enter skips the wait.
+      if (!ok && !q.options && !q.compare) fbEl.innerHTML = `<div class="flash bad">It's ${esc(q.style === "map" ? it.label : it.ans)}</div>`;
+      if (q.style === "map" && mapCtl) mapCtl.mark({ hit: [it.id], miss: picked && !ok ? [picked] : [] });
+      onAnswer(ok, picked);
+      fastTimer = setTimeout(() => { if (stack.isConnected) goNext(); }, ok ? 250 : 900);
+      return;
+    }
     const p = picked && !(ok && picked === it.id) ? picked : null;
     const pLabel = p && ((q.labels && q.labels[p]) || nameOf(p));
     let line, sub = esc(it.fact) + (it.k === "territory" ? " · Territory" : ""), marks, key;
@@ -832,7 +843,7 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
     stack.classList.add("answered");
     onAnswer(ok, picked);
     const nb = host.querySelector("[data-next]");
-    nb.addEventListener("click", onNext);
+    nb.addEventListener("click", goNext);
     nb.focus({ preventScroll: true });
   }
 
@@ -861,7 +872,7 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
       if (!answered && /^[1-4]$/.test(e.key) && (q.options || q.compare)) {
         const b = host.querySelectorAll("[data-id]")[+e.key - 1]; if (b) { b.click(); e.preventDefault(); }
       } else if (answered && e.key === "Enter" && (e.target.tagName !== "BUTTON" || e.target.closest(".map-ctrl"))) {
-        e.preventDefault(); onNext();
+        e.preventDefault(); goNext();
       }
     }
   };
@@ -926,8 +937,9 @@ const quiz = (() => {
     if (!lens.includes(len)) len = lens.includes(20) ? 20 : lens[0];
     const where = T.pref.region === "All" ? SETS[T.def.set].whole : T.pref.region;
     host().innerHTML = `<div class="setup">
-      <div><h1>${esc(T.def.name)}</h1><p>A timed quiz, from ${esc(where)}. You can change this in settings.</p></div>
+      <div><h1>${esc(T.def.name)}</h1><p>A race against the clock, from ${esc(where)}. Answers move on right away; the map and details are in Practice.</p></div>
       <div class="field"><span id="lenLbl">How many</span><div class="seg" role="group" aria-labelledby="lenLbl" id="qLen">${lens.map(n => `<button type="button" data-len="${n}" aria-pressed="${n === len}">${!isCompare && n === P.length ? `All ${n}` : n}</button>`).join("")}</div></div>
+      <p class="best-line">${bestText(T.prog.best[quizKey()])}</p>
       <button class="btn primary" type="button" id="qStart">Start</button>
     </div>`;
     $("#qLen").addEventListener("click", e => { const b = e.target.closest("[data-len]"); if (b) { len = +b.dataset.len; setup(); } });
@@ -936,18 +948,21 @@ const quiz = (() => {
       else start(shuffle(P).slice(0, len).map(it => makeQuestion(it, T.pref.style)));
     });
   }
-  function start(qs) {
-    run = { qs, i: 0, score: 0, misses: [], t0: Date.now() };
-    stopTimer(); timer = setInterval(() => { const el = $("#qTime"); if (el && run) el.textContent = fmtTime((Date.now() - run.t0) / 1000); }, 500);
+  // Best result for this topic, region, length and answer style: most right, then fastest
+  const quizKey = () => ["quiz", poolKey(), len, T.pref.style].join("|");
+  const bestText = b => b ? `Your best: ${b.s} / ${len} in ${fmtTenths(b.t)}` : "No best time yet for this one";
+  function start(qs, full = true) {
+    run = { qs, i: 0, score: 0, misses: [], t0: Date.now(), full };
+    stopTimer(); timer = setInterval(() => { const el = $("#qTime"); if (el && run) el.textContent = fmtTenths((Date.now() - run.t0) / 1000); }, 100);
     ask();
   }
   function stopTimer() { if (timer) clearInterval(timer); timer = null; }
   function ask() {
     if (run.i >= run.qs.length) return results();
     const q = run.qs[run.i], last = run.i === run.qs.length - 1;
-    const top = `<div class="qtop"><span>${run.i + 1} / ${run.qs.length}</span><span class="qtrack"><span style="width:${100 * run.i / run.qs.length}%"></span></span><span id="qTime">${fmtTime((Date.now() - run.t0) / 1000)}</span></div>`;
+    const top = `<div class="qtop"><span>${run.i + 1} / ${run.qs.length}</span><span class="qtrack"><span style="width:${100 * run.i / run.qs.length}%"></span></span><span id="qTime">${fmtTenths((Date.now() - run.t0) / 1000)}</span></div>`;
     ctl = renderQuestion(host(), q, {
-      top, below: `${run.score} correct so far`,
+      top, below: `${run.score} correct so far`, fast: true,
       nextLabel: last ? "See results" : "Next",
       onAnswer(ok, picked) {
         if (!q.compare) grade(q.it.id, ok);
@@ -961,6 +976,14 @@ const quiz = (() => {
     stopTimer(); ctl = null;
     const secs = (Date.now() - run.t0) / 1000, total = run.qs.length, pct = Math.round(100 * run.score / total);
     const def = T.def;
+    let bestLine = "";
+    if (run.full) {
+      const k = quizKey(), prev = T.prog.best[k];
+      const better = !prev || run.score > prev.s || (run.score === prev.s && secs < prev.t);
+      if (better) { T.prog.best[k] = { s: run.score, t: Math.round(secs * 10) / 10 }; saveProgress(); }
+      bestLine = better ? (prev ? `<p class="best-line new">New best! Your last best was ${prev.s} / ${total} in ${fmtTenths(prev.t)}.</p>` : `<p class="best-line new">That's your first time for this quiz. Beat it next round.</p>`)
+        : `<p class="best-line">${bestText(prev)}</p>`;
+    }
     const missFig = ({ q, p }) => {
       const it = q.it;
       if (q.compare) return `<figure>${img(it.id, "Flag of " + it.label)}<figcaption>${esc(it.label)}<small>${esc(def.verb)} than ${esc((q.a.id === it.id ? q.b : q.a).label)}</small></figcaption></figure>`;
@@ -971,14 +994,15 @@ const quiz = (() => {
     };
     host().innerHTML = `<div class="setup">
       <div class="score">${run.score}<small> / ${total}</small></div>
-      <p>${pct}% correct in ${fmtTime(secs)}</p>
+      <p class="quiz-time">${pct}% correct in <b>${fmtTenths(secs)}</b></p>
+      ${bestLine}
       ${run.misses.length && def.kind !== "compare" ? `<button class="btn primary" type="button" id="qRetry">Retry the ${run.misses.length} you missed</button>` : ""}
       <button class="btn${run.misses.length ? "" : " primary"}" type="button" id="qAgain" style="width:100%">New quiz</button>
     </div>
     ${run.misses.length ? `<div class="misses">${run.misses.map(missFig).join("")}</div>` : ""}`;
     $("#qAgain").addEventListener("click", setup);
     const r = $("#qRetry");
-    if (r) r.addEventListener("click", () => start(shuffle(run.misses.map(m => m.q.compare ? makeCompare(m.q.a, m.q.b) : makeQuestion(m.q.it, T.pref.style)))));
+    if (r) r.addEventListener("click", () => start(shuffle(run.misses.map(m => m.q.compare ? makeCompare(m.q.a, m.q.b) : makeQuestion(m.q.it, T.pref.style))), false));
   }
   return {
     reset() { run = null; stopTimer(); setup(); },

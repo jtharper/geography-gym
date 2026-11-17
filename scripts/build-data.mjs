@@ -56,6 +56,11 @@ const phoneOf = c => {
   const sx = c.idd.suffixes || [];
   return sx.length === 1 ? r + sx[0] : r;
 };
+// flag-icons draws a few countries with their plain civil flag. Use the flag most people know instead.
+// Costa Rica: the state flag, with the coat of arms (niemela/flags, from Wikimedia Commons, public domain).
+const FLAG_OVERRIDE = { CR: 'https://raw.githubusercontent.com/niemela/flags/master/data/CR_state.svg' };
+const flagOverride = {};
+for (const [code, url] of Object.entries(FLAG_OVERRIDE)) flagOverride[code] = await (await fetch(url)).text();
 const countries = [], flags = [];
 for (const c of all) {
   const code = c.cca2;
@@ -63,7 +68,7 @@ for (const c of all) {
   if (c.unMember || extraCountries.includes(code)) kind = 'country';
   else if (territories.includes(code)) kind = 'territory';
   if (!kind) continue;
-  flags.push({ c: code, s: svgo(fs.readFileSync(`node_modules/flag-icons/flags/4x3/${code.toLowerCase()}.svg`, 'utf8')) });
+  flags.push({ c: code, s: svgo(flagOverride[code] || fs.readFileSync(`node_modules/flag-icons/flags/4x3/${code.toLowerCase()}.svg`, 'utf8')) });
   const alt = new Set([c.name.common, c.name.official, ...(aliases[code] || []), ...c.altSpellings.filter(a => a.length > 3 && /^[\x00-\x7F]+$/.test(a))]);
   const caps = capitalFix[code] || [...(c.capital || [])];
   const cur = Object.values(c.currencies || {}).map(x => x.name);
