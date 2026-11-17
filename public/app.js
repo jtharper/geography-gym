@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611172126";
+const VERSION = "202611172148";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -712,6 +712,45 @@ function compareOpponent(a, P) {
 }
 
 /* Draws one question into host (one stacked column; fits one screen on desktop). */
+/* ---------- capital photos (Practice): the lead photo of the city's Wikipedia article, loaded in the browser ---------- */
+const PHOTO_KEY = "geography-gym-photos-v1";
+let photoCache = {};
+try { photoCache = JSON.parse(localStorage.getItem(PHOTO_KEY)) || {}; } catch (e) {}
+// Capitals whose plain name is a different article (usually the state of the same name)
+const WIKI_TITLE = {
+  "Aguascalientes|Aguascalientes": "Aguascalientes City", "Campeche|Campeche": "Campeche City", "Chihuahua|Chihuahua": "Chihuahua City",
+  "Colima|Colima": "Colima City", "Durango|Durango": "Victoria de Durango", "Guanajuato|Guanajuato": "Guanajuato City",
+  "Oaxaca|Oaxaca": "Oaxaca City", "Puebla|Puebla": "Puebla City", "Querétaro|Querétaro": "Santiago de Querétaro",
+  "San Luis Potosí|San Luis Potosí": "San Luis Potosí City", "Tlaxcala|Tlaxcala": "Tlaxcala City", "Zacatecas|Zacatecas": "Zacatecas City",
+  "Mexico City|Mexico City": "Mexico City", "Bremen|Bremen": "Bremen", "Hamburg|Hamburg": "Hamburg", "Berlin|Berlin": "Berlin"
+};
+const COUNTRY_OF_SET = { states: "United States", ca: "Canada", au: "Australia", de: "Germany", mx: "Mexico" };
+const hasPhoto = def => def.field === "cap" && (def.kind === "fact" || def.kind === "text");
+function savePhotos() { try { localStorage.setItem(PHOTO_KEY, JSON.stringify(photoCache)); } catch (e) {} }
+async function capitalPhoto(it, def) {
+  const cap = it.cap, place = it.row.n, key = cap + "|" + place;
+  if (key in photoCache) return photoCache[key];
+  const country = COUNTRY_OF_SET[def.set];
+  const names = [place, ...(it.row.a || []), country].filter(Boolean).map(norm);
+  const tries = [...new Set([WIKI_TITLE[key], cap, `${cap}, ${place}`, country && `${cap}, ${country}`].filter(Boolean))];
+  let failed = false;
+  for (const t of tries) {
+    try {
+      const r = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t.replace(/ /g, "_"))}`);
+      if (!r.ok) continue;
+      const j = await r.json();
+      if (j.type !== "standard" || !j.thumbnail) continue;
+      // Make sure it's the right city: the article should mention the country or state
+      const text = " " + norm(`${j.description || ""} ${(j.extract || "").slice(0, 500)}`) + " ";
+      if (!names.some(n => n && text.includes(" " + n + " "))) continue;
+      const o = j.originalimage, src = o && o.width <= 900 ? o.source : j.thumbnail.source.replace(/\/\d+px-/, "/640px-");
+      return (photoCache[key] = { src, page: j.content_urls.desktop.page }, savePhotos(), photoCache[key]);
+    } catch (e) { failed = true; }
+  }
+  if (!failed) { photoCache[key] = null; savePhotos(); }
+  return null;
+}
+
 /* fast: quiz mode. No map or explanation after answering; a short flash, then the next question. */
 function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextLabel = "Next", fast = false }) {
   const it = q.it, def = T.def;
@@ -832,7 +871,19 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
       };
       if (mapCtl) apply(mapCtl); else setTimeout(() => apply(mapCtl), 300);
     } else {
-      fbEl.innerHTML = resultRow + `<figure class="map" data-map>${MAP_CONTROLS}<figcaption class="map-key">${keyHTML}</figcaption></figure>${tip}`;
+      const mapFig = `<figure class="map" data-map>${MAP_CONTROLS}<figcaption class="map-key">${keyHTML}</figcaption></figure>`;
+      const photo = hasPhoto(def);
+      fbEl.innerHTML = resultRow + (photo ? `<div class="media">${mapFig}<figure class="cap-photo loading"><img alt="${esc(it.cap)}"><figcaption><b>${esc(it.cap)}</b><a target="_blank" rel="noopener">Wikipedia</a></figcaption></figure></div>` : mapFig) + tip;
+      if (photo) {
+        const fig = fbEl.querySelector(".cap-photo"), im = fig.querySelector("img");
+        const drop = () => { fig.remove(); };
+        capitalPhoto(it, def).then(res => {
+          if (!fig.isConnected) return;
+          if (!res) return drop();
+          im.onload = () => fig.classList.remove("loading"); im.onerror = drop;
+          im.src = res.src; fig.querySelector("a").href = res.page;
+        });
+      }
       mountMap(fbEl.querySelector("[data-map]")).then(c => {
         if (!c) return;
         c.mark(marks);
@@ -931,9 +982,11 @@ const quiz = (() => {
   const host = () => $("#view-quiz");
   function setup() {
     stopTimer(); run = null; ctl = null;
-    const P = pool();
+    const P = uniquePool(pool());
     const isCompare = T.def.kind === "compare";
-    const lens = isCompare ? [10, 20, 30] : [10, 20, 50].filter(n => n < P.length).concat([P.length]);
+    const maxPairs = Math.floor(P.length / 2);
+    const lens = isCompare ? ([10, 20, 30].filter(n => n <= maxPairs).length ? [10, 20, 30].filter(n => n <= maxPairs) : [maxPairs])
+      : [10, 20, 50].filter(n => n < P.length).concat([P.length]);
     if (!lens.includes(len)) len = lens.includes(20) ? 20 : lens[0];
     const where = T.pref.region === "All" ? SETS[T.def.set].whole : T.pref.region;
     host().innerHTML = `<div class="setup">
@@ -944,9 +997,31 @@ const quiz = (() => {
     </div>`;
     $("#qLen").addEventListener("click", e => { const b = e.target.closest("[data-len]"); if (b) { len = +b.dataset.len; setup(); } });
     $("#qStart").addEventListener("click", () => {
-      if (isCompare) { const qs = []; for (let i = 0; i < len; i++) { const a = pick(P); qs.push(makeCompare(a, compareOpponent(a, P))); } start(qs); }
+      if (isCompare) start(comparePairs(P, len));
       else start(shuffle(P).slice(0, len).map(it => makeQuestion(it, T.pref.style)));
     });
+  }
+  // No repeats in a quiz: every place once, never the same answer twice, and only one of two identical flags
+  function uniquePool(P) {
+    const def = T.def, seen = new Set(), out = [];
+    for (const it of shuffle(P)) {
+      let k = it.id;
+      if (def.kind === "flag" && TWINS[it.id]) k = [it.id, TWINS[it.id]].sort().join("+");
+      else if (def.kind === "fact" || def.kind === "text") k = def.multi ? it.vals.map(norm).sort().join("+") : norm(it.ans);
+      if (seen.has(k)) continue;
+      seen.add(k); out.push(it);
+    }
+    return out;
+  }
+  // Bigger/smaller: each place shows up in one pair only
+  function comparePairs(P, n) {
+    const left = shuffle(P), qs = [];
+    while (qs.length < n && left.length >= 2) {
+      const a = left.shift(), b = compareOpponent(a, left) || left[0];
+      left.splice(left.indexOf(b), 1);
+      qs.push(makeCompare(a, b));
+    }
+    return qs;
   }
   // Best result for this topic, region, length and answer style: most right, then fastest
   const quizKey = () => ["quiz", poolKey(), len, T.pref.style].join("|");

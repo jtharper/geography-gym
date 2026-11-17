@@ -10,7 +10,7 @@ Pick a topic from the menu at the top right. Topics are grouped by tabs.
 
 **World**
 - **Country flags**: 197 countries (the 193 UN members plus Kosovo, Palestine, Taiwan and Vatican City), plus an optional 35 territories.
-- **Country capitals** and **Capitals → country**: name the capital, or name the country from its capital.
+- **Country capitals** and **Capitals → country**: name the capital, or name the country from its capital. In Practice, a photo of the capital appears next to the map after you answer (this works for every capitals topic).
 - **Find it on the map**: click the country. Tiny countries get a dot you can click.
 - **Country shapes**: name the country from its outline.
 - **Neighbors**: pick a country that borders it.
@@ -36,7 +36,7 @@ In Practice, after every answer, a map zooms to the place, highlighted in blue. 
 ## Modes
 
 - **Practice**: endless spaced repetition. Things you miss come back sooner, and an item counts as learned after 3 correct answers in a row.
-- **Quiz**: a race against the clock, 10, 20, 50 or all of them. Answers move straight on (no map), the clock shows tenths of a second, and your best score and time are saved for each topic, region, length and answer style. Retry the ones you missed at the end.
+- **Quiz**: a race against the clock, 10, 20, 50 or all of them. Every place comes up once, the same answer never repeats (one Euro question, not twenty) and of two identical flags only one appears. Answers move straight on (no map), the clock shows tenths of a second, and your best score and time are saved for each topic, region, length and answer style. Retry the ones you missed at the end.
 - **Name them**: type every one you can think of. The clock is running.
 - **Browse**: a gallery you can search. Country flags also has a look-alikes section for flags that are easy to mix up.
 
@@ -105,4 +105,5 @@ Before committing a change to the site, run `npm run bump`. It stamps a new vers
 - Population: World Bank, via [datasets/population](https://github.com/datasets/population) (2025 figures).
 - US state and Canadian province flags: [region-flags](https://github.com/fonttools/region-flags) (public domain, from Wikimedia Commons), with Minnesota, Utah and Mississippi from [us-state-flags](https://www.npmjs.com/package/us-state-flags) (ISC).
 - Australian and German state flags: [niemela/flags](https://github.com/niemela/flags), from Wikimedia Commons (public domain).
+- Capital photos: the lead image of each city's English Wikipedia article, loaded in the browser from the Wikipedia API. Each photo links to its article, where the image's author and license are listed.
 - Maps: [world-atlas](https://github.com/topojson/world-atlas) and [Natural Earth](https://www.naturalearthdata.com/) (public domain) for the world, lakes, rivers, mountain ranges and provinces; [us-atlas](https://github.com/topojson/us-atlas) (US Census Bureau, public domain) for the US.
