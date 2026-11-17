@@ -202,7 +202,8 @@ document.addEventListener("click", e => { if (!menu.hidden && !menu.contains(e.t
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !menu.hidden) { setMenu(false); menuBtn.focus(); } });
 menu.addEventListener("click", e => { if (e.target.closest("a[href^='#']")) setMenu(false); });
 
-$("#topicList").innerHTML = TOPICS.map(t => `<a href="#${t.id}-practice" data-topic="${t.id}">${esc(t.name)}</a>`).join("");
+const CHECK = `<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+$("#topicList").innerHTML = TOPICS.map(t => `<a href="#${t.id}-practice" data-topic="${t.id}">${esc(t.name)}${CHECK}</a>`).join("");
 
 function renderSettings() {
   const def = T.def, p = T.pref;
@@ -224,7 +225,7 @@ function renderSettings() {
     b.hidden = !def.styles.includes(b.dataset.style);
     b.setAttribute("aria-pressed", b.dataset.style === p.style);
   });
-  $("#browseName").textContent = def.kind === "flag" ? "Browse flags" : "Browse capitals";
+  $("#browseName").textContent = "Browse";
 }
 $("#regionSel").addEventListener("change", e => { if (!T) return; T.pref.region = e.target.value; saveSettings(); settingsChanged(); });
 $("#terrToggle").addEventListener("change", e => { if (!T) return; T.pref.terr = e.target.checked; saveSettings(); settingsChanged(); });

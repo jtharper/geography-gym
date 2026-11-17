@@ -39,27 +39,35 @@
       <div class="menu" id="menu" hidden>
         <div class="menu-sec">
           <div class="menu-label">Topic</div>
-          <div class="topics" id="topicList"></div>
+          <nav class="menu-list" id="topicList" aria-label="Topic"></nav>
         </div>
         <div class="menu-sec">
-          <a href="#practice" data-view="practice"><b>Practice</b><small>Learn at your own pace</small></a>
-          <a href="#quiz" data-view="quiz"><b>Quiz</b><small>A timed round with a score</small></a>
-          <a href="#name-all" data-view="name-all"><b>Name them all</b><small>Type every country you know</small></a>
-          <a href="#browse" data-view="browse"><b id="browseName">Browse flags</b><small>Look through all of them</small></a>
+          <div class="menu-label">Mode</div>
+          <nav class="menu-list" aria-label="Mode">
+            <a href="#practice" data-view="practice">Practice<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></a>
+            <a href="#quiz" data-view="quiz">Quiz<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></a>
+            <a href="#name-all" data-view="name-all">Name them all<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></a>
+            <a href="#browse" data-view="browse"><span id="browseName">Browse</span><svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></a>
+          </nav>
         </div>
         <div class="menu-sec">
-          <label class="menu-label" for="regionSel">Region</label>
-          <select id="regionSel"></select>
-          <label class="row-toggle" for="terrToggle" id="terrRow"><span>Include territories</span><input type="checkbox" id="terrToggle"></label>
-          <div class="menu-label" id="styleLbl">Answer with</div>
-          <div class="seg" role="group" aria-labelledby="styleLbl" id="styleSeg">
-            <button type="button" data-style="choice">Choices</button>
-            <button type="button" data-style="type">Typing</button>
-            <button type="button" data-style="reverse">Flags</button>
+          <div class="menu-label">Settings</div>
+          <div class="set-row">
+            <label for="regionSel">Region</label>
+            <select id="regionSel"></select>
           </div>
-          <label class="row-toggle" for="soundToggle"><span>Sounds</span><input type="checkbox" id="soundToggle"></label>
+          <div class="set-row stack">
+            <span id="styleLbl">Answer with</span>
+            <div class="seg soft" role="group" aria-labelledby="styleLbl" id="styleSeg">
+              <button type="button" data-style="choice">Choices</button>
+              <button type="button" data-style="type">Typing</button>
+              <button type="button" data-style="reverse">Flags</button>
+            </div>
+          </div>
+          <label class="set-row" for="terrToggle" id="terrRow"><span>Include territories</span><input type="checkbox" class="switch" role="switch" id="terrToggle"></label>
+          <label class="set-row" for="soundToggle"><span>Sounds</span><input type="checkbox" class="switch" role="switch" id="soundToggle"></label>
         </div>
-        <div class="menu-sec">
+        <div class="menu-foot">
           <button type="button" class="link-btn" id="resetBtn">Reset progress</button>
         </div>
       </div>
@@ -89,7 +97,7 @@
         <button type="button" id="brLook" aria-pressed="false">Look-alikes</button>
       </div>
       <input type="search" id="brSearch" placeholder="Search" aria-label="Search flags">
-      <label class="row-toggle inline" for="brHide"><span>Hide names</span><input type="checkbox" id="brHide"></label>
+      <label class="set-row" for="brHide"><span>Hide names</span><input type="checkbox" class="switch" role="switch" id="brHide"></label>
     </div>
     <div id="browseBody"></div>
   </section>
