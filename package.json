@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "data": "node scripts/build-data.mjs",
-    "dev": "npx --yes serve public -l 8080"
+    "dev": "npx --yes serve public -l 8080",
+    "bump": "node scripts/bump.mjs"
   },
   "devDependencies": {
     "d3-geo": "^3.1.2",

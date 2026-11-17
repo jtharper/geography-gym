@@ -95,6 +95,8 @@ The script downloads a few files as it runs (population figures, Natural Earth o
 
 Every push to `main` deploys automatically. Pushes to other branches get their own preview URLs.
 
+Before committing a change to the site, run `npm run bump`. It stamps a new version on `app.js`, the stylesheets and the data files, so browsers never mix a new page with old cached code.
+
 ## Credits
 
 - Fonts: [Manrope](https://github.com/sharanda/manrope), plus Bricolage Grotesque, Silkscreen, Fraunces, Fredoka and Patrick Hand for the extra looks, all self-hosted from [Fontsource](https://fontsource.org) (OFL).

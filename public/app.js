@@ -1,5 +1,8 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
+// Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
+const VERSION = "202611172120";
+const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
    kind: flag      flag image → name (also "pick the flag")
@@ -458,7 +461,7 @@ const mapOf = setName => MAPS[SETS[setName].map];
 function loadMap(setName) {
   const url = SETS[setName].map;
   const m = MAPS[url] || (MAPS[url] = { data: null, svg: null, marks: [], loading: null });
-  if (!m.loading) m.loading = fetch(url).then(r => { if (!r.ok) throw new Error("map"); return r.json(); }).then(data => {
+  if (!m.loading) m.loading = fetch(vurl(url)).then(r => { if (!r.ok) throw new Error("map"); return r.json(); }).then(data => {
     m.data = data;
     const svg = document.createElementNS(SVGNS, "svg");
     svg.setAttribute("class", "map-svg");
@@ -1343,7 +1346,7 @@ function parseHash() {
 function loadSet(name) {
   const s = SETS[name];
   if (s.rows) return Promise.resolve();
-  if (!s.loading) s.loading = Promise.all([fetch(s.data), s.images ? fetch(s.images) : null, ...(s.needs || []).map(loadSet)]).then(async ([d, i]) => {
+  if (!s.loading) s.loading = Promise.all([fetch(vurl(s.data)), s.images ? fetch(vurl(s.images)) : null, ...(s.needs || []).map(loadSet)]).then(async ([d, i]) => {
     if (!d.ok || (i && !i.ok)) throw new Error("load");
     s.rows = await d.json();
     if (i) (await i.json()).forEach(f => { s.img[f.c] = URL.createObjectURL(new Blob([f.s], { type: "image/svg+xml" })); });
