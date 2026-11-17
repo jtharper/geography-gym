@@ -15,7 +15,7 @@ Each topic keeps its own progress. To add a topic, add an entry to `TOPICS` at t
 
 - **Practice**: endless spaced repetition. Flags you miss come back sooner, and an item counts as learned after 3 correct answers in a row.
 - **Quiz**: a timed round of 10, 20, 50 or all flags, with a retry for the ones you missed.
-- **Name them all**: type every country you can think of, and each flag is revealed as you name it. The clock is running.
+- **Name them**: type every one you can think of, and each flag is revealed as you name it. The clock is running.
 - **Browse**: a gallery you can search. Country flags also has a look-alikes section for flags that are easy to mix up.
 
 The topic, the mode and every setting (region, territories, answer style, sounds) are in the one menu at the top right. There's also a light/dark toggle. Progress and settings are saved in the browser's `localStorage`.
