@@ -230,6 +230,14 @@ main { flex: 1; display: flex; flex-direction: column; align-items: center; padd
 .map-svg path.hit2 { fill: color-mix(in srgb, var(--accent) 38%, var(--map-land)); }
 .k.hit2 { background: color-mix(in srgb, var(--accent) 45%, var(--map-land)); }
 .locate:not(.answered) .map-svg path[data-c]:hover, .locate:not(.answered) .map-svg .dot:hover { fill: color-mix(in srgb, var(--accent) 30%, var(--map-land)); cursor: pointer; }
+/* Lakes, rivers and mountain ranges drawn over the map */
+.map-svg .feat { vector-effect: non-scaling-stroke; pointer-events: none; }
+.map-svg .feat.lake { fill: var(--accent); stroke: var(--accent); stroke-width: 1px; }
+.map-svg .feat.river { fill: none; stroke: var(--accent); stroke-width: 3px; stroke-linecap: round; stroke-linejoin: round; }
+.map-svg .feat.range { fill: var(--accent); fill-opacity: .55; stroke: var(--accent); stroke-width: 1.5px; }
+.map-svg .feat.miss { fill: var(--bad); stroke: var(--bad); }
+.map-svg .feat.river.miss { fill: none; }
+.kind-feature .card .nm { font-size: 17px; }
 .map { cursor: grab; touch-action: none; user-select: none; }
 .map.dragging { cursor: grabbing; }
 .map-ctrl { position: absolute; top: 10px; right: 10px; z-index: 2; display: grid; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
@@ -265,6 +273,8 @@ main { flex: 1; display: flex; flex-direction: column; align-items: center; padd
   .q-stack.locate .map.main { aspect-ratio: auto; flex: 1 1 0; min-height: 240px; }
   .q-stack.locate.answered { gap: 10px; }
   .q-stack.locate.answered .fb { flex: none; }
+  .q-stack.kind-feature .map.main { aspect-ratio: auto; flex: 1 1 0; min-height: 220px; }
+  .q-stack.kind-feature.answered .fb { flex: none; }
   .pair { max-width: 760px; }
   .q-stack.answered .pair-card { padding: 10px; gap: 4px; }
   .q-stack.answered .pair-card .flag { max-height: 10vh; }

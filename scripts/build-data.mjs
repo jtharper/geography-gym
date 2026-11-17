@@ -196,3 +196,102 @@ for (const f of ufc.features) {
 }
 fs.writeFileSync('public/data/us-map.json', JSON.stringify({ vb: [0, 0, 975, 610], shapes: ushapes, info: uinfo, markers: [] }));
 console.log('us map:', ushapes.length, 'shapes,', Object.keys(uinfo).length, 'states located');
+
+/* ---------------- Nature: lakes, rivers, mountain ranges (Natural Earth 1:50m, public domain) ---------------- */
+const NE = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/';
+const getJSON = async f => (await fetch(NE + f)).json();
+const [neLakes, neRivers, neRegions] = await Promise.all([getJSON('ne_50m_lakes.geojson'), getJSON('ne_50m_rivers_lake_centerlines.geojson'), getJSON('ne_50m_geography_regions_polys.geojson')]);
+const neName = p => p.name_en || p.name || p.NAME_EN || p.NAME || '';
+// [display name, Natural Earth names to merge, other accepted answers, optional longitude window [min,max]]
+const LAKES = [
+  ['Lake Baikal', ['Baikal'], ['Baikal']], ['Lake Victoria', ['Victoria', 'Nyanza'], ['Victoria', 'Victoria Nyanza']], ['Lake Tanganyika', ['Tanganyika'], ['Tanganyika']],
+  ['Lake Malawi', ['Malawi'], ['Malawi', 'Lake Nyasa', 'Nyasa']], ['Lake Superior', ['Superior'], ['Superior']], ['Lake Michigan', ['Michigan'], ['Michigan']],
+  ['Lake Huron', ['Huron'], ['Huron']], ['Lake Erie', ['Erie'], ['Erie']], ['Lake Ontario', ['Ontario'], ['Ontario']],
+  ['Great Bear Lake', ['Great Bear'], ['Great Bear']], ['Great Slave Lake', ['Great Slave'], ['Great Slave']], ['Lake Winnipeg', ['Winnipeg'], ['Winnipeg']],
+  ['Lake Athabasca', ['Athabasca'], ['Athabasca']], ['Reindeer Lake', ['Reindeer'], ['Reindeer']], ['Lake Titicaca', ['Titicaca'], ['Titicaca']],
+  ['Lake Ladoga', ['Ladoga'], ['Ladoga']], ['Lake Onega', ['Onega'], ['Onega']], ['Lake Balkhash', ['Balkhash'], ['Balkhash']],
+  ['Lake Chad', ['Chad'], ['Chad']], ['Lake Turkana', ['Turkana'], ['Turkana', 'Lake Rudolf']], ['Lake Vänern', ['Vänern'], ['Vanern', 'Vänern']],
+  ['Issyk-Kul', ['Issyk-Kul'], ['Lake Issyk-Kul', 'Issyk Kul']], ['Tonlé Sap', ['Tonlé Sap'], ['Tonle Sap']], ['Lake Geneva', ['Geneva'], ['Geneva', 'Lac Léman', 'Lake Leman']],
+  ['Lake Constance', ['Constance'], ['Constance', 'Bodensee']], ['Lake Nicaragua', ['Nicaragua'], ['Nicaragua']], ['Great Salt Lake', ['Great Salt'], ['Great Salt']],
+  ['Dead Sea', ['Dead Sea'], []], ['Lake Volta', ['Volta'], ['Volta']], ['Lake Kariba', ['Kariba'], ['Kariba']], ['Lake Nasser', ['Nasser'], ['Nasser']],
+  ['Lake Albert', ['Albert'], ['Albert']], ['Lake Kivu', ['Kivu'], ['Kivu']], ['Lake Tana', ['Tana'], ['Tana']], ['Lake Urmia', ['Urmia'], ['Urmia']],
+  ['Lake Van', ['Van'], ['Van']], ['Qinghai Lake', ['Qinghai'], ['Qinghai', 'Koko Nor']], ['Poyang Lake', ['Poyang'], ['Poyang']],
+  ['Lake Okeechobee', ['Okeechobee'], ['Okeechobee']], ['Lake of the Woods', ['Woods'], []], ['Lake Champlain', ['Champlain'], ['Champlain']],
+  ['Lake Tahoe', ['Tahoe'], ['Tahoe']], ['Lake Inari', ['Inari'], ['Inari']], ['Lake Peipus', ['Peipus', 'Pihkva'], ['Peipus']], ['Lake Balaton', ['Balaton'], ['Balaton']],
+  ['Lake Sevan', ['Sevan'], ['Sevan']], ['Lake Toba', ['Toba'], ['Toba']], ['Aral Sea', ['North Aral Sea', 'South Aral Sea'], ['Aral']],
+  ['Lake Mead', ['Mead'], ['Mead']], ['Lake Taupō', ['Taupo'], ['Taupo', 'Lake Taupo']], ['Sea of Galilee', ['Sea of Galilee'], ['Lake Tiberias', 'Kinneret', 'Lake Kinneret']],
+  ['Lake Biwa', ['Biwa'], ['Biwa']], ['Lake Saimaa', ['Saimaa'], ['Saimaa']], ['Lough Neagh', ['Neagh'], ['Neagh', 'Lake Neagh']], ['Lake Skadar', ['Skadar'], ['Skadar', 'Lake Scutari']],
+  ['Lake Eyre', ['Eyre North', 'Eyre South'], ['Eyre', 'Kati Thanda']], ['Lake Chapala', ['Chapala'], ['Chapala']], ['Lake Khövsgöl', ['Khövsgöl Nuur'], ['Khovsgol', 'Lake Khovsgol']]
+];
+const RIVERS = [
+  ['Nile', ['Nile', 'White Nile', 'Mountain Nile', 'Albert Nile', 'Victoria Nile'], ['Nile River', 'River Nile']], ['Blue Nile', ['Blue Nile', 'Abay'], []],
+  ['Amazon', ['Amazonas'], ['Amazon River', 'Amazonas']], ['Yangtze', ['Yangtze', 'Tongtian', 'Tuotuo'], ['Chang Jiang', 'Yangtze River']],
+  ['Mississippi', ['Mississippi'], ['Mississippi River']], ['Missouri', ['Missouri'], ['Missouri River']], ['Yenisei', ['Yenisey', 'Verkhniy Yenisey'], ['Yenisey']],
+  ['Ob', ['Ob'], ['Ob River']], ['Irtysh', ['Irtysh', 'Ertis'], []], ['Lena', ['Lena'], []], ['Amur', ['Amur'], ['Heilong Jiang']],
+  ['Congo', ['Congo', 'Lualaba'], ['Congo River', 'Zaire']], ['Mekong', ['Mekong'], ['Mekong River']], ['Niger', ['Niger'], ['Niger River']],
+  ['Volga', ['Volga'], ['Volga River']], ['Danube', ['Danube'], ['Danube River', 'Donau']], ['Rhine', ['Rhine', 'Rhein'], ['Rhein']],
+  ['Ganges', ['Ganges'], ['Ganga']], ['Indus', ['Indus'], []], ['Brahmaputra', ['Brahmaputra', 'Dihang'], ['Yarlung Tsangpo']],
+  ['Yellow River', ['Huang', 'Yellow'], ['Huang He', 'Yellow']], ['Euphrates', ['Euphrates', 'Firat', 'Al Furat'], []], ['Tigris', ['Tigris', 'Dicle'], []],
+  ['Zambezi', ['Zambezi'], ['Zambesi']], ['Orinoco', ['Orinoco'], []], ['Paraná', ['Paraná'], ['Parana']], ['Mackenzie', ['Mackenzie'], []],
+  ['Yukon', ['Yukon'], []], ['St. Lawrence', ['St. Lawrence'], ['Saint Lawrence']], ['Columbia', ['Columbia'], []],
+  ['Colorado', ['Colorado'], ['Colorado River'], [-125, -100]], ['Rio Grande', ['Rio Grande'], ['Río Bravo', 'Rio Bravo']], ['Murray', ['Murray'], []],
+  ['Darling', ['Darling', 'Barwon'], []], ['Dnieper', ['Dnieper', 'Dnepre'], ['Dnipro']], ['Don', ['Don'], []], ['Elbe', ['Elbe'], []],
+  ['Seine', ['Seine'], []], ['Loire', ['Loire'], []], ['Thames', ['Thames'], []], ['Oder', ['Oder'], ['Odra']], ['Vistula', ['Vistula'], ['Wisła', 'Wisla']],
+  ['Po', ['Po'], [], [5, 15]], ['Rhône', ['Rhône'], ['Rhone']], ['Tagus', ['Tagus', 'Tajo'], ['Tejo', 'Tajo']], ['Ebro', ['Ebro'], []], ['Ohio', ['Ohio'], []],
+  ['Irrawaddy', ['Ayeyarwady', 'Irrawaddy Delta'], ['Ayeyarwady']], ['Salween', ['Salween', 'Nu'], []], ['Orange', ['Orange'], []], ['Limpopo', ['Limpopo'], []],
+  ['Senegal', ['Sénégal'], ['Sénégal']], ['São Francisco', ['São  Francisco'], ['Sao Francisco']], ['Madeira', ['Madeira'], []],
+  ['Ural', ['Ural'], []], ['Kolyma', ['Kolyma'], []], ['Syr Darya', ['Syr Darya'], []], ['Amu Darya', ['Amu  Darya'], ['Oxus']], ['Jordan', ['Jordan'], []]
+];
+const RANGES = [
+  ['Himalayas', ['Himalayas'], ['Himalaya', 'Himalayan Mountains']], ['Andes', ['Andes'], ['Andes Mountains']], ['Rocky Mountains', ['Rocky Mountains'], ['Rockies']],
+  ['Alps', ['Alps'], ['The Alps']], ['Ural Mountains', ['Ural Mountains'], ['Urals']], ['Appalachian Mountains', ['Appalachian Mountains'], ['Appalachians']],
+  ['Atlas Mountains', ['Atlas Mountains', 'High Atlas', 'Anti-Atlas', 'Saharan Atlas'], ['Atlas']], ['Caucasus Mountains', ['Caucasus Mountains', 'Lesser Caucasus'], ['Caucasus']],
+  ['Carpathian Mountains', ['Carpathian Mountains'], ['Carpathians']], ['Pyrenees', ['Pyrenees'], []], ['Zagros Mountains', ['Zagros Mountains'], ['Zagros']],
+  ['Hindu Kush', ['Hindu Kush'], []], ['Tian Shan', ['Tian Shan'], ['Tien Shan']], ['Altai Mountains', ['Altai Mountains'], ['Altai']],
+  ['Great Dividing Range', ['Great Dividing Range'], []], ['Sierra Madre Occidental', ['Sierra Madre Occidental'], []], ['Sierra Madre Oriental', ['Sierra Madre Oriental'], []],
+  ['Scandinavian Mountains', ['Scandinavian Mountains'], ['Scandes']], ['Drakensberg', ['Drakensberg'], []], ['Ethiopian Highlands', ['Ethiopian Highlands'], []],
+  ['Kunlun Mountains', ['Kunlun Mountains'], ['Kunlun']], ['Karakoram', ['Karakoram'], []], ['Pamir Mountains', ['Pamir mountains'], ['Pamirs', 'Pamir']],
+  ['Dinaric Alps', ['Dinaric Alps'], []], ['Balkan Mountains', ['Balkan Mountains'], ['Stara Planina']], ['Sierra Nevada', ['Sierra Nevada'], [], [-125, -110]],
+  ['Cascade Range', ['Cascade Range'], ['Cascades']], ['Brooks Range', ['Brooks Range'], []], ['Alaska Range', ['Alaska Range'], []], ['Coast Mountains', ['Coast Mountains'], []],
+  ['Verkhoyansk Range', ['Verkhoyansk Range'], []], ['Alborz Mountains', ['Elburz Mountains'], ['Elburz', 'Alborz']], ['Western Ghats', ['Western Ghats'], []],
+  ['Eastern Ghats', ['Eastern Ghats'], []], ['Annamite Range', ['Annamite Range'], ['Annamites', 'Truong Son']], ['Southern Alps', ['Southern Alps/Kā Tiritiri o te Moana'], ['Kā Tiritiri o te Moana']],
+  ['Tibesti Mountains', ['Tibesti Mountains'], ['Tibesti']], ['Guiana Highlands', ['Guiana Highlands'], []], ['Sikhote-Alin', ['Sikhote-Alin'], []],
+  ['Qinling Mountains', ['Qinling'], ['Qinling']], ['Pontic Mountains', ['Pontic Mountains'], []], ['Cantabrian Mountains', ['Cantabrian Mountains'], []]
+];
+const countryFeats = wfc.features.filter(f => f.id !== '010').map(f => ({ f, code: ccnTo2[f.id] || nameTo2[f.properties.name] || null })).filter(x => x.code && ourCodes.has(x.code));
+const regionByCode = Object.fromEntries(countries.map(c => [c.c, c.r]));
+function coordsOf(geom) {
+  const out = [], walk = a => typeof a[0] === 'number' ? out.push(a) : a.forEach(walk);
+  walk(geom.coordinates); return out;
+}
+function countriesTouched(geom) {
+  const pts = coordsOf(geom), step = Math.max(1, Math.floor(pts.length / 60)), hits = new Map();
+  for (let i = 0; i < pts.length; i += step) {
+    const hit = countryFeats.find(x => geoContains(x.f, pts[i]));
+    if (hit) hits.set(hit.code, (hits.get(hit.code) || 0) + 1);
+  }
+  return [...hits.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c);
+}
+function buildFeatures(list, source, type, cla) {
+  const out = [];
+  for (const [n, neNames, alts, lon] of list) {
+    const parts = source.features.filter(f => neNames.includes(neName(f.properties)) && (!cla || f.properties.FEATURECLA === cla) && (!lon || (() => { const c = coordsOf(f.geometry); const x = c.reduce((s, p) => s + p[0], 0) / c.length; return x >= lon[0] && x <= lon[1]; })()));
+    if (!parts.length) { console.warn('  missing', type, n); continue; }
+    const geoms = parts.map(f => f.geometry);
+    const merged = type === 'river'
+      ? { type: 'MultiLineString', coordinates: geoms.flatMap(g => g.type === 'LineString' ? [g.coordinates] : g.coordinates) }
+      : { type: 'MultiPolygon', coordinates: geoms.flatMap(g => g.type === 'Polygon' ? [g.coordinates] : g.coordinates) };
+    const cc = countriesTouched(merged);
+    const b = wpath.bounds(merged), c = wpath.centroid(merged);
+    const id = type + '-' + n.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    out.push({ c: id, n, a: alts, t: type, r: regionByCode[cc[0]] || 'Asia', cc, d: wpath(merged), b: [r1(b[0][0]), r1(b[0][1]), r1(b[1][0]), r1(b[1][1])], p: [r1(c[0]), r1(c[1])] });
+  }
+  return out;
+}
+const nature = [
+  ...buildFeatures(LAKES, neLakes, 'lake'),
+  ...buildFeatures(RIVERS, neRivers, 'river'),
+  ...buildFeatures(RANGES, neRegions, 'range', 'Range/mtn')
+];
+fs.writeFileSync('public/data/nature.json', JSON.stringify(nature));
+console.log('nature:', ['lake', 'river', 'range'].map(t => `${nature.filter(x => x.t === t).length} ${t}s`).join(', '));

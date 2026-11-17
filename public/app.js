@@ -41,6 +41,13 @@ const TOPICS = [
   { id: "population", group: "World", name: "More or fewer people", set: "countries", kind: "compare", field: "pop", regions: WORLD_REGIONS, terr: false,
     styles: ["pair"], ask: "Which country has more people?", verb: "has more people", modes: PQB },
 
+  { id: "lakes", group: "Nature", name: "Lakes", unit: "lakes", set: "nature", kind: "feature", type: "lake", regions: WORLD_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "Which lake is highlighted?", typeHolder: "Type the lake", modes: PQB },
+  { id: "rivers", group: "Nature", name: "Rivers", unit: "rivers", set: "nature", kind: "feature", type: "river", regions: WORLD_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "Which river is highlighted?", typeHolder: "Type the river", modes: PQB },
+  { id: "ranges", group: "Nature", name: "Mountain ranges", unit: "ranges", set: "nature", kind: "feature", type: "range", regions: WORLD_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "Which mountain range is highlighted?", typeHolder: "Type the mountain range", modes: PQB },
+
   { id: "state-flags", group: "United States", name: "State flags", unit: "state flags", set: "states", kind: "flag", regions: US_REGIONS, terr: false,
     styles: ["choice", "type", "reverse"], ask: "Which state is this?", find: "Find the flag of", typeHolder: "Type the state", nameHint: "Type every state you can think of." },
   { id: "state-capitals", group: "United States", name: "State capitals", unit: "state capitals", set: "states", kind: "fact", field: "cap", regions: US_REGIONS, terr: false,
@@ -58,7 +65,8 @@ const MODES = ["practice", "quiz", "name-all", "browse"];
 const MODE_NAMES = { practice: "Practice", quiz: "Quiz", "name-all": "Name them", browse: "Browse" };
 const SETS = {
   countries: { data: "data/countries.json", images: "data/flags.json", map: "data/world-map.json", rows: null, img: {}, loading: null },
-  states: { data: "data/states.json", images: "data/state-flags.json", map: "data/us-map.json", rows: null, img: {}, loading: null }
+  states: { data: "data/states.json", images: "data/state-flags.json", map: "data/us-map.json", rows: null, img: {}, loading: null },
+  nature: { data: "data/nature.json", images: null, map: "data/world-map.json", rows: null, img: {}, loading: null, needs: ["countries"] }
 };
 
 /* ---------- country flag look-alikes ---------- */
@@ -150,8 +158,9 @@ function fmtVal(field, v) {
 
 /* ---------- active topic ---------- */
 let T = null; // { def, items, byId, alias, img, prog, pref }
+const countryName = c => { const r = SETS.countries.rows && SETS.countries.rows.find(x => x.c === c); return r ? r.n : c; };
 function shapeInfo(def, id) {
-  const m = MAPS[def.set]; const info = m && m.data && m.data.info[id];
+  const m = mapOf(def.set); const info = m && m.data && m.data.info[id];
   return info && (m.data.markers || []).indexOf(id) < 0 ? info : null;
 }
 function buildTopic(def) {
@@ -162,7 +171,8 @@ function buildTopic(def) {
   if (def.kind === "compare") rows = rows.filter(r => r[def.field] != null && r[def.field] > 0);
   if (def.kind === "neighbors") rows = rows.filter(r => r.nb && r.nb.length);
   if (def.kind === "shape") rows = rows.filter(r => { const i = shapeInfo(def, r.c); return i && Math.max(i.b[2] - i.b[0], i.b[3] - i.b[1]) >= 1.5; });
-  if (def.kind === "locate") rows = rows.filter(r => { const m = MAPS[def.set]; return m && m.data && m.data.info[r.c]; });
+  if (def.kind === "locate") rows = rows.filter(r => { const m = mapOf(def.set); return m && m.data && m.data.info[r.c]; });
+  if (def.kind === "feature") rows = rows.filter(r => r.t === def.type);
   const items = rows.map(r => {
     const base = { id: r.c, label: r.n, r: r.r, sr: where(r), k: r.k, cap: r.cap, row: r };
     switch (def.kind) {
@@ -181,6 +191,11 @@ function buildTopic(def) {
           fact: def.field === "code" ? `${r.c} is ${r.n} · ${where(r)}` : `${r.cap} is the capital of ${r.n} · ${where(r)}` };
       case "neighbors": return { ...base, ans: r.n, alts: r.a || [], nb: r.nb, fact: `${r.n} · ${where(r)}` };
       case "compare": return { ...base, ans: r.n, alts: r.a || [], val: r[def.field], fact: where(r) };
+      case "feature": {
+        const names = r.cc.map(countryName), shown = names.slice(0, 5).concat(names.length > 5 ? [`${names.length - 5} more`] : []);
+        const verb = r.t === "river" ? "Flows through" : r.t === "lake" ? (names.length > 1 ? "Shared by" : "In") : "Runs through";
+        return { ...base, ans: r.n, alts: r.a || [], sr: r.r, feat: r, fact: names.length ? `${verb} ${listJoin(shown)}` : r.r };
+      }
       default: return { ...base, ans: r.n, alts: r.a || [], fact: [r.cap && `Capital: ${r.cap}`, where(r)].filter(Boolean).join(" · ") };
     }
   });
@@ -204,7 +219,7 @@ function grade(id, ok) {
 const kindOk = it => T.pref.terr || it.k !== "territory";
 const pool = () => T.items.filter(it => kindOk(it) && (T.pref.region === "All" || it.r === T.pref.region));
 const poolKey = () => T.pref.region + (T.pref.terr ? "+t" : "");
-const nameOf = id => (T.rowById[id] && T.rowById[id].n) || (T.byId[id] && T.byId[id].label) || id;
+const nameOf = id => (T.rowById[id] && T.rowById[id].n) || (T.byId[id] && T.byId[id].label) || countryName(id);
 
 function judgeTyped(input, q) {
   const target = q.it, qn = norm(input);
@@ -236,7 +251,7 @@ function judgeTyped(input, q) {
 const img = (id, alt = "") => T.img[id] ? `<img class="flag" src="${T.img[id]}" alt="${esc(alt)}" draggable="false">` : `<div class="flag noflag" aria-hidden="true"></div>`;
 const minis = ids => `<div class="minis">${ids.filter(k => T.byId[k] || T.rowById[k]).map(k => `<figure>${img(k, "Flag of " + nameOf(k))}<figcaption>${esc(nameOf(k))}</figcaption></figure>`).join("")}</div>`;
 function shapeSVG(id, cls = "shape") {
-  const m = MAPS[T.def.set], info = m.data.info[id];
+  const m = mapOf(T.def.set), info = m.data.info[id];
   const [x0, y0, x1, y1] = info.b, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
   let w = (x1 - x0) * 1.12, h = (y1 - y0) * 1.12;
   if (w / h < 4 / 3) w = h * 4 / 3; else h = w * 3 / 4;
@@ -367,11 +382,13 @@ function updateMeter() {
 }
 
 /* ---------- map (zoom, pan, hover names, click to answer) ---------- */
-const MAPS = {}; // set name -> { data, svg, byCode, dByCode, dots, rings, loading }
+const MAPS = {}; // map file -> { data, svg, byCode, dByCode, dots, rings, overlay, loading }
 const SVGNS = "http://www.w3.org/2000/svg";
+const mapOf = setName => MAPS[SETS[setName].map];
 function loadMap(setName) {
-  const m = MAPS[setName] || (MAPS[setName] = { data: null, svg: null, marks: [], loading: null });
-  if (!m.loading) m.loading = fetch(SETS[setName].map).then(r => { if (!r.ok) throw new Error("map"); return r.json(); }).then(data => {
+  const url = SETS[setName].map;
+  const m = MAPS[url] || (MAPS[url] = { data: null, svg: null, marks: [], loading: null });
+  if (!m.loading) m.loading = fetch(url).then(r => { if (!r.ok) throw new Error("map"); return r.json(); }).then(data => {
     m.data = data;
     const svg = document.createElementNS(SVGNS, "svg");
     svg.setAttribute("class", "map-svg");
@@ -387,6 +404,8 @@ function loadMap(setName) {
       g.appendChild(path);
     }
     svg.appendChild(g);
+    // Highlighted lake, river or mountain range
+    m.overlays = [0, 1].map(() => { const o = document.createElementNS(SVGNS, "path"); svg.appendChild(o); return o; });
     // Clickable dots for places too small to click (shown only in "find it on the map")
     const dg = document.createElementNS(SVGNS, "g"); dg.setAttribute("class", "dots");
     m.dots = [];
@@ -406,13 +425,15 @@ function loadMap(setName) {
   return m.loading;
 }
 function frameFor(data, ids, aspect, padK = 1.8) {
-  const boxes = ids.map(id => data.info[id]).filter(Boolean).map(i => i.b);
+  return frameBoxes(data, ids.map(id => data.info[id]).filter(Boolean).map(i => i.b), aspect, padK);
+}
+function frameBoxes(data, boxes, aspect, padK = 1.8, minFrac) {
   if (!boxes.length) return fullFrame(data, aspect);
   const x0 = Math.min(...boxes.map(b => b[0])), y0 = Math.min(...boxes.map(b => b[1]));
   const x1 = Math.max(...boxes.map(b => b[2])), y1 = Math.max(...boxes.map(b => b[3]));
   const [vx, vy, vw, vh] = data.vb;
   let w = (x1 - x0) * padK, h = (y1 - y0) * padK;
-  const minW = vw * (vw === 1000 ? 0.16 : 0.32);
+  const minW = vw * (minFrac || (vw === 1000 ? 0.16 : 0.32));
   w = Math.max(w, minW); h = Math.max(h, minW / aspect);
   if (w / h < aspect) w = h * aspect; else h = w / aspect;
   if (w > vw) { w = vw; h = w / aspect; }
@@ -441,11 +462,12 @@ async function mountMap(container, { pick = null, tips = true, dots = false } = 
   if (!container.isConnected) return null;
   const { data, svg } = m;
   m.marks.forEach(el => el.classList.remove("hit", "hit2", "miss")); m.marks = [];
+  m.overlays.forEach(o => o.removeAttribute("d"));
   svg.classList.toggle("show-dots", dots);
   container.insertBefore(svg, container.firstChild);
   const aspect = () => container.clientWidth / Math.max(1, container.clientHeight) || 2;
   const fullW = data.vb[2];
-  let vb = data.vb.slice(), anim = 0, ringIds = [null, null], disposed = false;
+  let vb = data.vb.slice(), anim = 0, ringIds = [null, null], ringFeats = [null, null], disposed = false;
   const ctl = { pick, tips, fit: null };
   // The map element is shared: stop whatever the previous question's map was doing
   if (m.ctl) m.ctl.dispose();
@@ -457,8 +479,8 @@ async function mountMap(container, { pick = null, tips = true, dots = false } = 
     svg.setAttribute("viewBox", v.join(" "));
     const r = v[2] * 0.006;
     if (dots) m.dots.forEach(c => c.setAttribute("r", r));
-    ringIds.forEach((id, i) => {
-      const ring = m.rings[i], info = id && data.info[id], b = info && info.b;
+    [0, 1].forEach(i => {
+      const ring = m.rings[i], info = ringFeats[i] || (ringIds[i] && data.info[ringIds[i]]), b = info && info.b;
       const small = b && (b[2] - b[0] < v[2] * 0.04 && b[3] - b[1] < v[3] * 0.04);
       ring.style.display = small ? "" : "none";
       if (small) { ring.setAttribute("cx", info.p[0]); ring.setAttribute("cy", info.p[1]); ring.setAttribute("r", v[2] * 0.035); svg.appendChild(ring); }
@@ -493,8 +515,10 @@ async function mountMap(container, { pick = null, tips = true, dots = false } = 
     ringIds = [hit[0] || null, miss[0] || null];
     setVB(vb);
   };
-  ctl.focus = (ids, fly = true) => {
-    const f = frameFor(data, ids, aspect());
+  ctl.overlay = (feat, i = 0) => { ringFeats[i] = feat; setVB(vb); const o = m.overlays[i]; o.setAttribute("d", feat.d); o.setAttribute("class", `feat ${feat.t}${i ? " miss" : ""}`); svg.insertBefore(o, svg.querySelector(".dots")); };
+  ctl.focusBox = (b, padK, minFrac, fly = true) => ctl.focusFrame(frameBoxes(data, [b], aspect(), padK, minFrac), fly);
+  ctl.focus = (ids, fly = true) => ctl.focusFrame(frameFor(data, ids, aspect()), fly);
+  ctl.focusFrame = (f, fly = true) => {
     ctl.fit = f;
     if (fly && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
       const wide = [f[0] - f[2], f[1] - f[3], f[2] * 3, f[3] * 3];
@@ -627,6 +651,7 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
       <div class="flag-answers">${q.options.map((o, i) => `<button type="button" class="flag-answer" data-id="${o.id}" aria-label="Option ${i + 1}">${img(o.id)}<span class="cap"></span></button>`).join("")}</div>`;
   } else {
     if (def.kind === "flag") h += `<div class="q-head"><div class="qflag">${img(it.id, "Mystery flag")}</div><p class="prompt">${esc(def.ask)}</p></div>`;
+    else if (def.kind === "feature") h += `<div class="q-head"><p class="prompt">${esc(def.ask)}</p></div><figure class="map main" data-map>${MAP_CONTROLS}<figcaption class="map-key"><span>Scroll or use + and − to zoom</span></figcaption></figure>`;
     else if (def.kind === "shape") h += `<div class="q-head"><div class="qflag qshape">${shapeSVG(it.id)}</div><p class="prompt">${esc(def.ask)}</p></div>`;
     else if (def.kind === "text") h += `<div class="q-head">${textTile(it.q)}<p class="prompt">${esc(def.ask)}</p></div>`;
     else h += `<div class="q-head"><div class="qflag small">${img(it.id, "Flag of " + it.label)}</div><div class="qname">${esc(it.label)}</div><p class="prompt">${esc(def.ask)}</p></div>`;
@@ -642,6 +667,9 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
 
   if (q.style === "map") {
     mountMap(host.querySelector("[data-map]"), { tips: false, dots: true, pick: code => { if (!answered) finish(q.ok.has(code), code, ""); } }).then(c => { mapCtl = c; });
+  }
+  if (def.kind === "feature") {
+    mountMap(host.querySelector("[data-map]")).then(c => { mapCtl = c; if (c) { c.overlay(it.feat); c.focusBox(it.feat.b, 5, 0.22, false); } });
   }
 
   function finish(ok, picked, note) {
@@ -673,6 +701,10 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
       sub = `${esc(it.label)} borders ${esc(listJoin(nbNames))}${note ? " · " + esc(note) : ""}`;
       marks = { hit: [it.id], hit2: it.nb, miss: ok || !p ? [] : [p] };
       key = [[it.id, "hit", ""], [it.nb[0], "hit2", "Neighbors"]].concat(!ok && p ? [[p, "miss", "your pick"]] : []);
+    } else if (def.kind === "feature") {
+      line = ok ? `Correct, it's ${esc(it.ans)}.` : `It's ${esc(it.ans)}.${p ? ` You picked ${esc(pLabel)}.` : ""}`;
+      marks = null;
+      key = [];
     } else if (def.kind === "locate") {
       line = ok ? `Correct, that's ${esc(it.label)}.` : (p ? `That's ${esc(pLabel)}. ${esc(it.label)} is in blue.` : `${esc(it.label)} is in blue.`);
       marks = { hit: [it.id], miss: p && !ok ? [p] : [] };
@@ -694,15 +726,26 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
       else if (p && T.byId[p] && def.kind === "flag") tip = `<div class="tip">${minis([it.id, p])}<div><b>Side by side.</b> Compare the two flags.</div></div>`;
       else if (p && T.byId[p] && def.kind === "shape") tip = `<div class="tip"><div class="minis">${[it.id, p].map(k => `<figure>${shapeSVG(k, "mini-shape")}<figcaption>${esc(nameOf(k))}</figcaption></figure>`).join("")}</div><div><b>Side by side.</b> Compare the two outlines.</div></div>`;
     }
-    const keyHTML = key.filter(k => k[0]).map(([id, cls, extra]) => `<span><i class="k ${cls}"></i>${esc(extra && cls === "hit2" ? extra : nameOf(id))}${extra && cls !== "hit2" ? ` (${esc(extra)})` : ""}</span>`).join("");
+    let keyHTML = key.filter(k => k[0]).map(([id, cls, extra]) => `<span><i class="k ${cls}"></i>${esc(extra && cls === "hit2" ? extra : nameOf(id))}${extra && cls !== "hit2" ? ` (${esc(extra)})` : ""}</span>`).join("");
+    const pf = def.kind === "feature" && p && !ok && T.byId[p] ? T.byId[p].feat : null;
+    if (def.kind === "feature") keyHTML = `<span><i class="k hit"></i>${esc(it.ans)}</span>` + (pf ? `<span><i class="k miss"></i>${esc(T.byId[p].ans)} (your pick)</span>` : "");
     belowEl.textContent = "";
     const resultRow = `<div class="result"><div class="result-text"><span class="result-line ${ok ? "good" : "bad"}">${line}</span><span class="result-sub">${sub}</span></div>
       <div class="next-row"><span class="kbd-hint">or press <span class="kbd">Enter</span></span><button type="button" class="btn primary" data-next>${nextLabel}</button></div></div>`;
-    if (q.style === "map") {
+    if (q.style === "map" || def.kind === "feature") {
       fbEl.innerHTML = resultRow;
       const mapEl = host.querySelector("[data-map]");
       mapEl.querySelector(".map-key").innerHTML = keyHTML;
-      const apply = c => { if (!c) return; c.pick = null; c.tips = true; c.mark(marks); c.focus(marks.miss.length ? [it.id, ...marks.miss] : [it.id]); };
+      const apply = c => {
+        if (!c) return;
+        c.pick = null; c.tips = true;
+        if (def.kind === "feature") {
+          if (pf) { c.overlay(pf, 1); const b = it.feat.b, b2 = pf.b; c.focusBox([Math.min(b[0], b2[0]), Math.min(b[1], b2[1]), Math.max(b[2], b2[2]), Math.max(b[3], b2[3])], 1.6, 0.1); }
+          else c.focusBox(it.feat.b, 2.2, 0.1);
+          return;
+        }
+        c.mark(marks); c.focus(marks.miss.length ? [it.id, ...marks.miss] : [it.id]);
+      };
       if (mapCtl) apply(mapCtl); else setTimeout(() => apply(mapCtl), 300);
     } else {
       fbEl.innerHTML = resultRow + `<figure class="map" data-map>${MAP_CONTROLS}<figcaption class="map-key">${keyHTML}</figcaption></figure>${tip}`;
@@ -973,15 +1016,16 @@ const browse = (() => {
     }
     let list = pool().filter(it => !qs || [it.label, it.ans, it.cap || "", it.q || "", ...it.alts].some(a => norm(a).includes(qs)));
     if (def.kind === "compare") list.sort((a, b) => b.val - a.val); else list.sort((a, b) => a.label.localeCompare(b.label));
-    const answerFirst = def.kind === "flag" || def.kind === "shape" || def.kind === "text" || def.kind === "compare";
+    const answerFirst = def.kind === "flag" || def.kind === "shape" || def.kind === "text" || def.kind === "compare" || def.kind === "feature";
     body().innerHTML = list.length ? `<div class="cards">${list.map((it, i) => {
       const s = status(it.id);
-      const vis = def.kind === "shape" ? shapeSVG(it.id, "card-shape") : def.kind === "text" ? textTile(it.q, "card-text") : img(it.id, hide && answerFirst ? "" : "Flag of " + it.label);
+      const vis = def.kind === "shape" ? shapeSVG(it.id, "card-shape") : def.kind === "text" ? textTile(it.q, "card-text") : def.kind === "feature" ? "" : img(it.id, hide && answerFirst ? "" : "Flag of " + it.label);
       let title = answerFirst ? it.ans : it.label, sub;
       if (def.kind === "flag") sub = it.cap || "";
       else if (def.kind === "compare") { title = `${i + 1}. ${it.label}`; sub = fmtVal(def.field, it.val); }
       else if (def.kind === "neighbors") sub = "Borders " + listJoin(it.nb.map(nameOf));
       else if (def.kind === "shape" || def.kind === "text") sub = it.sr;
+      else if (def.kind === "feature") sub = it.fact;
       else sub = it.ans;
       const hideCls = hide ? (answerFirst ? "hidden" : "hidden sub-only") : "";
       return `<button type="button" class="card ${hideCls}" data-card="${it.id}" aria-label="${hide ? "Hidden answer, click to reveal" : esc(title)}">${vis}<span class="nm">${def.kind === "compare" ? "" : `<span class="dot ${s}" title="${s}"></span>`}<span>${esc(title)}</span></span><span class="sub">${esc(sub || "–")}</span></button>`;
@@ -1009,14 +1053,14 @@ function parseHash() {
 function loadSet(name) {
   const s = SETS[name];
   if (s.rows) return Promise.resolve();
-  if (!s.loading) s.loading = Promise.all([fetch(s.data), fetch(s.images)]).then(async ([d, i]) => {
-    if (!d.ok || !i.ok) throw new Error("load");
+  if (!s.loading) s.loading = Promise.all([fetch(s.data), s.images ? fetch(s.images) : null, ...(s.needs || []).map(loadSet)]).then(async ([d, i]) => {
+    if (!d.ok || (i && !i.ok)) throw new Error("load");
     s.rows = await d.json();
-    (await i.json()).forEach(f => { s.img[f.c] = URL.createObjectURL(new Blob([f.s], { type: "image/svg+xml" })); });
+    if (i) (await i.json()).forEach(f => { s.img[f.c] = URL.createObjectURL(new Blob([f.s], { type: "image/svg+xml" })); });
   }).catch(err => { s.loading = null; throw err; });
   return s.loading;
 }
-const needsMap = def => def.kind === "shape" || def.kind === "locate";
+const needsMap = def => def.kind === "shape" || def.kind === "locate" || def.kind === "feature";
 let routeToken = 0;
 async function route() {
   let { topic, mode } = parseHash();
