@@ -194,13 +194,20 @@ $("#themeBtn").addEventListener("click", () => {
 });
 applyThemeLabel();
 
-/* ---------- menu ---------- */
-const menu = $("#menu"), menuBtn = $("#menuBtn");
-function setMenu(open) { menu.hidden = !open; menuBtn.setAttribute("aria-expanded", open); }
-menuBtn.addEventListener("click", e => { e.stopPropagation(); setMenu(menu.hidden); });
-document.addEventListener("click", e => { if (!menu.hidden && !menu.contains(e.target)) setMenu(false); });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !menu.hidden) { setMenu(false); menuBtn.focus(); } });
-menu.addEventListener("click", e => { if (e.target.closest("a[href^='#']")) setMenu(false); });
+/* ---------- popovers: topic menu + settings panel ---------- */
+const menu = $("#menu"), menuBtn = $("#menuBtn"), setPanel = $("#setPanel"), setBtn = $("#setBtn");
+const POPS = [[menuBtn, menu], [setBtn, setPanel]];
+const anyOpen = () => POPS.some(([, p]) => !p.hidden);
+function setPop(btn, open) {
+  POPS.forEach(([b, p]) => { const o = b === btn && open; p.hidden = !o; b.setAttribute("aria-expanded", o); });
+}
+POPS.forEach(([b, p]) => b.addEventListener("click", e => { e.stopPropagation(); setPop(b, p.hidden); }));
+document.addEventListener("click", e => { if (anyOpen() && !POPS.some(([b, p]) => p.contains(e.target) || b.contains(e.target))) setPop(null, false); });
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape" || !anyOpen()) return;
+  const open = POPS.find(([, p]) => !p.hidden); setPop(null, false); open[0].focus();
+});
+menu.addEventListener("click", e => { if (e.target.closest("a[href^='#']")) setPop(null, false); });
 
 const CHECK = `<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
 $("#topicList").innerHTML = TOPICS.map(t => `<a href="#${t.id}-practice" data-topic="${t.id}">${esc(t.name)}${CHECK}</a>`).join("");
@@ -212,7 +219,8 @@ function renderSettings() {
     a.href = `#${a.dataset.topic}-${state.view}`;
     if (a.dataset.topic === def.id) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
   });
-  menu.querySelectorAll("a[data-view]").forEach(a => { a.href = `#${def.id}-${a.dataset.view}`; });
+  document.querySelectorAll("#modeNav a").forEach(a => { a.href = `#${def.id}-${a.dataset.view}`; });
+  $("#setTopic").textContent = `for ${def.name}`;
   $("#regionSel").innerHTML = def.regions.map(r => {
     const n = T.items.filter(it => kindOk(it) && (r === "All" || it.r === r)).length;
     const label = r === "All" ? (def.set === "states" ? "All 50 states" : "Whole world") : r;
@@ -225,7 +233,6 @@ function renderSettings() {
     b.hidden = !def.styles.includes(b.dataset.style);
     b.setAttribute("aria-pressed", b.dataset.style === p.style);
   });
-  $("#browseName").textContent = "Browse";
 }
 $("#regionSel").addEventListener("change", e => { if (!T) return; T.pref.region = e.target.value; saveSettings(); settingsChanged(); });
 $("#terrToggle").addEventListener("change", e => { if (!T) return; T.pref.terr = e.target.checked; saveSettings(); settingsChanged(); });
@@ -359,7 +366,7 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
   }
   return {
     key(e) {
-      if (!menu.hidden) return;
+      if (anyOpen()) return;
       if (e.target.tagName === "INPUT" && !answered) return;
       if (!answered && /^[1-4]$/.test(e.key) && q.options) {
         const b = host.querySelectorAll("[data-id]")[+e.key - 1]; if (b) { b.click(); e.preventDefault(); }
@@ -416,7 +423,7 @@ const quiz = (() => {
     if (!lens.includes(len)) len = lens.includes(20) ? 20 : lens[0];
     const where = T.pref.region === "All" ? (T.def.set === "states" ? "all 50 states" : "the whole world") : T.pref.region;
     host().innerHTML = `<div class="setup">
-      <div><h1>${esc(T.def.name)} quiz</h1><p>From ${esc(where)}. You can change this in the menu.</p></div>
+      <div><h1>${esc(T.def.name)} quiz</h1><p>From ${esc(where)}. You can change this in settings.</p></div>
       <div class="field"><span id="lenLbl">How many</span><div class="seg" role="group" aria-labelledby="lenLbl" id="qLen">${lens.map(n => `<button type="button" data-len="${n}" aria-pressed="${n === len}">${n === P.length ? `All ${n}` : n}</button>`).join("")}</div></div>
       <button class="btn primary" type="button" id="qStart">Start</button>
     </div>`;
@@ -622,7 +629,7 @@ async function route() {
   $("#loading").hidden = true;
   state.view = mode;
   document.querySelectorAll(".view").forEach(s => s.hidden = s.id !== "view-" + mode);
-  menu.querySelectorAll("a[data-view]").forEach(a => { if (a.dataset.view === mode) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+  document.querySelectorAll("#modeNav a").forEach(a => { if (a.dataset.view === mode) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
   renderSettings();
   document.title = `${T.def.name} · Geography Gym`;
   VIEWS[mode].show();
