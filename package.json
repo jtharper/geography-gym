@@ -1,0 +1,16 @@
+{
+  "name": "flag-atlas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A game for learning every country flag.",
+  "type": "module",
+  "scripts": {
+    "data": "node scripts/build-data.mjs",
+    "dev": "npx --yes serve public -l 8080"
+  },
+  "devDependencies": {
+    "flag-icons": "7.6.0",
+    "svgo": "^4.1.0",
+    "world-countries": "^5.1.0"
+  }
+}
