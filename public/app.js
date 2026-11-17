@@ -268,8 +268,8 @@ function updateMeter() {
   $("#meterFill").style.width = (100 * m / Math.max(1, P.length)) + "%";
 }
 
-/* ---------- answer map ---------- */
-const MAPS = {}; // set name -> { data, svg, hits: [], rings: [], loading }
+/* ---------- answer map (zoom, pan, hover names) ---------- */
+const MAPS = {}; // set name -> { data, svg, byCode, hits, rings, loading }
 const SVGNS = "http://www.w3.org/2000/svg";
 function loadMap(setName) {
   const m = MAPS[setName] || (MAPS[setName] = { data: null, svg: null, hits: [], loading: null });
@@ -285,7 +285,7 @@ function loadMap(setName) {
     for (const sh of data.shapes) {
       const path = document.createElementNS(SVGNS, "path");
       path.setAttribute("d", sh.d);
-      if (sh.c) (m.byCode[sh.c] = m.byCode[sh.c] || []).push(path);
+      if (sh.c) { path.dataset.c = sh.c; (m.byCode[sh.c] = m.byCode[sh.c] || []).push(path); }
       g.appendChild(path);
     }
     svg.appendChild(g);
@@ -295,15 +295,15 @@ function loadMap(setName) {
   }).catch(e => { m.loading = null; throw e; });
   return m.loading;
 }
-// Pick a view that shows the answer (and the wrong pick, if any) with some context around it.
+// A view that shows the answer (and the wrong pick, if any) with some context around it.
 function frameFor(data, ids, aspect, padK = 1.8) {
   const boxes = ids.map(id => data.info[id]).filter(Boolean).map(i => i.b);
   if (!boxes.length) return data.vb.slice();
-  let x0 = Math.min(...boxes.map(b => b[0])), y0 = Math.min(...boxes.map(b => b[1]));
-  let x1 = Math.max(...boxes.map(b => b[2])), y1 = Math.max(...boxes.map(b => b[3]));
+  const x0 = Math.min(...boxes.map(b => b[0])), y0 = Math.min(...boxes.map(b => b[1]));
+  const x1 = Math.max(...boxes.map(b => b[2])), y1 = Math.max(...boxes.map(b => b[3]));
   const [vx, vy, vw, vh] = data.vb;
   let w = (x1 - x0) * padK, h = (y1 - y0) * padK;
-  const minW = vw * (data.vb[2] === 1000 ? 0.16 : 0.32);
+  const minW = vw * (vw === 1000 ? 0.16 : 0.32);
   w = Math.max(w, minW); h = Math.max(h, minW / aspect);
   if (w / h < aspect) w = h * aspect; else h = w / aspect;
   if (w > vw) { w = vw; h = w / aspect; }
@@ -313,48 +313,107 @@ function frameFor(data, ids, aspect, padK = 1.8) {
   y = Math.min(Math.max(y, vy - h * 0.1), vy + vh - h * 0.9);
   return [x, y, w, h];
 }
+const MAP_CONTROLS = `<div class="map-ctrl" role="group" aria-label="Map zoom">
+  <button type="button" data-z="in" aria-label="Zoom in"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button type="button" data-z="out" aria-label="Zoom out"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+  <button type="button" data-z="fit" aria-label="Back to the answer"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+</div><div class="map-tip" hidden></div>`;
+
 async function showMap(container, targetId, pickedId) {
-  const setName = T.def.set;
   let m;
-  try { m = await loadMap(setName); } catch (e) { container.remove(); return; }
+  try { m = await loadMap(T.def.set); } catch (e) { container.remove(); return; }
   if (!container.isConnected) return;
   const { data, svg } = m;
   m.hits.forEach(p => p.classList.remove("hit", "miss")); m.hits = [];
-  if (!targetId) {
-    m.rings.forEach(r => r.style.display = "none");
-    container.insertBefore(svg, container.firstChild);
-    // Frame the selected region; skip giants like Russia that would zoom the view all the way out
-    const region = T.pref.region === "All" ? null : pool().map(it => it.id).filter(id => { const b = data.info[id] && data.info[id].b; return b && b[2] - b[0] < data.vb[2] * 0.3; });
-    const aspect = container.clientWidth / Math.max(1, container.clientHeight) || 2;
-    svg.setAttribute("viewBox", (region ? frameFor(data, region, aspect, 1.15) : data.vb).join(" "));
-    return;
-  }
   const mark = (id, cls) => (m.byCode[id] || []).forEach(p => { p.classList.add(cls); m.hits.push(p); p.parentNode.appendChild(p); });
   if (pickedId) mark(pickedId, "miss");
   mark(targetId, "hit");
-  if (svg.parentNode !== container) { container.insertBefore(svg, container.firstChild); }
-  const aspect = container.clientWidth / Math.max(1, container.clientHeight) || 2.5;
-  const ids = pickedId ? [targetId, pickedId] : [targetId];
-  const to = frameFor(data, ids, aspect);
-  // Small places (islands, microstates) get a ring so they can be spotted.
-  [[targetId, 0], [pickedId, 1]].forEach(([id, i]) => {
-    const ring = m.rings[i], info = id && data.info[id];
-    const b = info && info.b, small = b && (b[2] - b[0] < to[2] * 0.04 && b[3] - b[1] < to[3] * 0.04);
-    ring.style.display = small ? "" : "none";
-    if (small) { ring.setAttribute("cx", info.p[0]); ring.setAttribute("cy", info.p[1]); ring.setAttribute("r", to[2] * 0.035); svg.appendChild(ring); }
-  });
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const cur = (svg.getAttribute("viewBox") || "").split(/\s+/).map(Number);
-  const from = cur.length === 4 && cur.every(isFinite) ? cur : [to[0] - to[2], to[1] - to[3], to[2] * 3, to[3] * 3];
-  if (reduce) { svg.setAttribute("viewBox", to.join(" ")); return; }
-  const t0 = performance.now(), dur = 650;
-  const step = now => {
-    if (!container.isConnected) return;
-    const t = Math.min(1, (now - t0) / dur), e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-    svg.setAttribute("viewBox", from.map((v, i) => v + (to[i] - v) * e).join(" "));
-    if (t < 1) requestAnimationFrame(step);
+  container.insertBefore(svg, container.firstChild);
+  const aspect = container.clientWidth / Math.max(1, container.clientHeight) || 2;
+  const fit = frameFor(data, pickedId ? [targetId, pickedId] : [targetId], aspect);
+  let vb = fit.slice(), anim = 0;
+  const [, , fullW] = data.vb;
+  const setVB = v => {
+    vb = v;
+    svg.setAttribute("viewBox", v.join(" "));
+    // Small places get a ring sized to the current zoom so they stay easy to spot.
+    [[targetId, 0], [pickedId, 1]].forEach(([id, i]) => {
+      const ring = m.rings[i], info = id && data.info[id], b = info && info.b;
+      const small = b && (b[2] - b[0] < v[2] * 0.04 && b[3] - b[1] < v[3] * 0.04);
+      ring.style.display = small ? "" : "none";
+      if (small) { ring.setAttribute("cx", info.p[0]); ring.setAttribute("cy", info.p[1]); ring.setAttribute("r", v[2] * 0.035); svg.appendChild(ring); }
+    });
   };
-  requestAnimationFrame(step);
+  const animateTo = (to, dur = 450) => {
+    cancelAnimationFrame(anim);
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return setVB(to);
+    const from = vb.slice(), t0 = performance.now();
+    const step = now => {
+      const t = Math.min(1, (now - t0) / dur), e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      setVB(from.map((v, i) => v + (to[i] - v) * e));
+      if (t < 1) anim = requestAnimationFrame(step);
+    };
+    anim = requestAnimationFrame(step);
+  };
+  const zoomAt = (k, fx = 0.5, fy = 0.5, smooth = false) => {
+    const w = Math.min(fullW * 1.2, Math.max(fullW * 0.015, vb[2] * k)), h = w / (vb[2] / vb[3]);
+    const px = vb[0] + fx * vb[2], py = vb[1] + fy * vb[3];
+    const next = [px - fx * w, py - fy * h, w, h];
+    smooth ? animateTo(next, 250) : (cancelAnimationFrame(anim), setVB(next));
+  };
+  // Fly in: start a few times wider than the answer frame
+  setVB([fit[0] - fit[2], fit[1] - fit[3], fit[2] * 3, fit[3] * 3]);
+  animateTo(fit, 650);
+
+  // Controls (re-bound each answer; the container is new each time)
+  container.querySelector(".map-ctrl").addEventListener("click", e => {
+    const bt = e.target.closest("[data-z]"); if (!bt) return;
+    if (bt.dataset.z === "in") zoomAt(1 / 1.6, .5, .5, true);
+    else if (bt.dataset.z === "out") zoomAt(1.6, .5, .5, true);
+    else animateTo(fit);
+  });
+  const rel = e => { const r = svg.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
+  container.addEventListener("wheel", e => {
+    e.preventDefault();
+    const [fx, fy] = rel(e);
+    zoomAt(Math.exp(e.deltaY * 0.0015), fx, fy);
+  }, { passive: false });
+  // Drag to pan, pinch to zoom
+  const pts = new Map(); let pinch0 = 0;
+  container.addEventListener("pointerdown", e => {
+    if (e.target.closest(".map-ctrl")) return;
+    container.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
+    cancelAnimationFrame(anim); container.classList.add("dragging");
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); }
+  });
+  container.addEventListener("pointermove", e => {
+    const tip = container.querySelector(".map-tip");
+    if (!pts.has(e.pointerId)) {
+      // Hover: show the name of the place under the cursor
+      const el = e.target.closest && e.target.closest("path[data-c]");
+      const it = el && T.byId[el.dataset.c];
+      if (it && e.pointerType === "mouse") {
+        const r = container.getBoundingClientRect();
+        tip.textContent = it.label; tip.hidden = false;
+        tip.style.left = (e.clientX - r.left + 12) + "px"; tip.style.top = (e.clientY - r.top + 12) + "px";
+      } else tip.hidden = true;
+      return;
+    }
+    tip.hidden = true;
+    const prev = pts.get(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
+    const r = svg.getBoundingClientRect();
+    if (pts.size === 1) {
+      const scale = Math.max(vb[2] / r.width, vb[3] / r.height);
+      setVB([vb[0] - (e.clientX - prev[0]) * scale, vb[1] - (e.clientY - prev[1]) * scale, vb[2], vb[3]]);
+    } else if (pts.size === 2 && pinch0) {
+      const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      const fx = ((a[0] + b[0]) / 2 - r.left) / r.width, fy = ((a[1] + b[1]) / 2 - r.top) / r.height;
+      zoomAt(pinch0 / d, fx, fy); pinch0 = d;
+    }
+  });
+  const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch0 = 0; if (!pts.size) container.classList.remove("dragging"); };
+  container.addEventListener("pointerup", up); container.addEventListener("pointercancel", up);
+  container.addEventListener("pointerleave", () => { const tip = container.querySelector(".map-tip"); if (tip) tip.hidden = true; });
 }
 
 /* ---------- question engine ---------- */
@@ -383,28 +442,28 @@ function makeQuestion(item, style) {
   return q;
 }
 
-/* Draws one question into host. top: optional HTML above the prompt. below: text under the answers before answering. */
+/* Draws one question into host. top: optional HTML above the question. below: text under the answers before answering.
+   Layout is one stacked column: before answering, a big flag and the answers; after answering, the flag shrinks
+   and the map and feedback appear underneath, all within one screen on desktop. */
 function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextLabel = "Next" }) {
   const it = q.it, def = T.def;
   let answered = false;
-  let h = top + `<div class="q-layout"><div class="q-main">`;
+  let h = top + `<div class="q-stack">`;
   if (q.style === "reverse") {
-    h += `<p class="prompt" style="margin-top:0">${esc(def.find)}</p><div class="qname">${esc(it.ans)}</div>
+    h += `<div class="q-head"><p class="prompt">${esc(def.find)}</p><div class="qname">${esc(it.ans)}</div></div>
       <div class="flag-answers">${q.options.map((o, i) => `<button type="button" class="flag-answer" data-id="${o.id}" aria-label="Option ${i + 1}">${img(o.id)}<span class="cap"></span></button>`).join("")}</div>`;
   } else {
-    if (def.kind === "flag") h += `<div class="qflag">${img(it.id, "Mystery flag")}</div><p class="prompt">${esc(def.ask)}</p>`;
-    else h += `<div class="qflag small">${img(it.id, "Flag of " + it.label)}</div><div class="qname">${esc(it.label)}</div><p class="prompt" style="margin-top:0">${esc(def.ask)}</p>`;
+    if (def.kind === "flag") h += `<div class="q-head"><div class="qflag">${img(it.id, "Mystery flag")}</div><p class="prompt">${esc(def.ask)}</p></div>`;
+    else h += `<div class="q-head"><div class="qflag small">${img(it.id, "Flag of " + it.label)}</div><div class="qname">${esc(it.label)}</div><p class="prompt">${esc(def.ask)}</p></div>`;
     if (q.style === "choice") {
       h += `<div class="answers">${q.options.map(o => `<button type="button" class="answer" data-id="${o.id}">${esc(o.ans)}</button>`).join("")}</div>`;
     } else {
       h += `<form class="type-row" autocomplete="off"><input id="typeIn" type="text" placeholder="${esc(def.typeHolder)}" aria-label="${esc(def.typeHolder)}" autocapitalize="off" spellcheck="false"><button class="btn primary" type="submit">Check</button><button class="btn" type="button" data-skip>Skip</button></form>`;
     }
   }
-  h += `<div class="below">${below}</div></div>
-    <aside class="q-side"><figure class="map idle" data-map><figcaption class="map-key"><span>Answer to see it on the map</span></figcaption></figure><div class="fb"></div></aside></div>`;
+  h += `<div class="below">${below}</div><div class="fb"></div></div>`;
   host.innerHTML = h;
-  const belowEl = host.querySelector(".below"), fbEl = host.querySelector(".fb"), mapEl = host.querySelector("[data-map]");
-  showMap(mapEl, null, null);
+  const stack = host.querySelector(".q-stack"), belowEl = host.querySelector(".below"), fbEl = host.querySelector(".fb");
 
   function finish(ok, picked, note) {
     if (answered) return; answered = true;
@@ -419,24 +478,25 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
     if (inp) { inp.disabled = true; inp.classList.add(ok ? "right" : "wrong"); host.querySelectorAll(".type-row button").forEach(b => b.disabled = true); }
     sfx(ok);
     const p = picked && picked !== it.id ? T.byId[picked] : null;
-    let r = `<div class="result">`;
-    r += ok ? `<div class="result-line good">Correct, it's ${esc(it.ans)}.</div>`
-            : `<div class="result-line bad">It's ${esc(it.ans)}.${p ? ` You picked ${esc(p.ans)}.` : ""}</div>`;
-    r += `<div class="result-sub">${esc(it.fact)}${it.k === "territory" ? " · Territory" : ""}</div>`;
-    if (note) r += `<div class="result-sub">${esc(note)}</div>`;
-    if (!ok && p && def.kind === "capital") r += `<div class="result-sub">${esc(p.ans)} is the capital of ${esc(p.label)}.</div>`;
+    let lines = ok ? `<span class="result-line good">Correct, it's ${esc(it.ans)}.</span>`
+                   : `<span class="result-line bad">It's ${esc(it.ans)}.${p ? ` You picked ${esc(p.ans)}.` : ""}</span>`;
+    let sub = esc(it.fact) + (it.k === "territory" ? " · Territory" : "");
+    if (!ok && p && def.kind === "capital") sub += ` · ${esc(p.ans)} is the capital of ${esc(p.label)}`;
+    if (note) sub += ` · ${esc(note)}`;
+    let tip = "";
     if (!ok && def.kind === "flag") {
       const gs = def.groups ? (groupsOf[it.id] || []) : [];
       const g = (p && gs.find(x => x.codes.includes(p.id))) || gs[0];
-      if (g) r += `<div class="tip"><b>${esc(g.t)}.</b>${minis(g.codes)}${esc(g.tip)}</div>`;
-      else if (p) r += `<div class="tip"><b>Side by side</b>${minis([it.id, p.id])}</div>`;
+      if (g) tip = `<div class="tip">${minis(g.codes)}<div><b>${esc(g.t)}.</b> ${esc(g.tip)}</div></div>`;
+      else if (p) tip = `<div class="tip">${minis([it.id, p.id])}<div><b>Side by side.</b> Compare the two flags.</div></div>`;
     }
-    r += `<div class="next-row"><button type="button" class="btn primary" data-next>${nextLabel}</button><span class="kbd-hint">or press <span class="kbd">Enter</span></span></div></div>`;
+    const key = p ? `<span><i class="k hit"></i>${esc(it.label)}</span><span><i class="k miss"></i>${esc(p.label)} (your pick)</span>` : `<span><i class="k hit"></i>${esc(it.label)}</span>`;
     belowEl.textContent = "";
-    fbEl.innerHTML = r;
-    mapEl.classList.remove("idle");
-    mapEl.querySelector(".map-key").innerHTML = p ? `<span><i class="k hit"></i>${esc(it.label)}</span><span><i class="k miss"></i>${esc(p.label)} (your pick)</span>` : `<span><i class="k hit"></i>${esc(it.label)}</span>`;
-    showMap(mapEl, it.id, p ? p.id : null);
+    fbEl.innerHTML = `<div class="result"><div class="result-text">${lines}<span class="result-sub">${sub}</span></div>
+      <div class="next-row"><span class="kbd-hint">or press <span class="kbd">Enter</span></span><button type="button" class="btn primary" data-next>${nextLabel}</button></div></div>
+      <figure class="map" data-map>${MAP_CONTROLS}<figcaption class="map-key">${key}</figcaption></figure>${tip}`;
+    stack.classList.add("answered");
+    showMap(fbEl.querySelector("[data-map]"), it.id, p ? p.id : null);
     onAnswer(ok, picked);
     const nb = host.querySelector("[data-next]");
     nb.addEventListener("click", onNext);
@@ -452,9 +512,9 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
       e.preventDefault();
       const r = judgeTyped(inp.value, it); if (!r) return;
       let note = "";
-      if (r.ok && r.twin) note = `${T.byId[r.picked].ans} has an identical flag, so that counts.`;
-      else if (r.ok && r.typo) note = `Accepted "${inp.value.trim()}" as a typo.`;
-      else if (!r.ok && !r.picked) note = `"${inp.value.trim()}" didn't match any answer.`;
+      if (r.ok && r.twin) note = `${T.byId[r.picked].ans} has an identical flag, so that counts`;
+      else if (r.ok && r.typo) note = `accepted "${inp.value.trim()}" as a typo`;
+      else if (!r.ok && !r.picked) note = `"${inp.value.trim()}" didn't match any answer`;
       finish(r.ok, r.ok ? it.id : r.picked, note);
     });
     form.querySelector("[data-skip]").addEventListener("click", () => finish(false, null, ""));
@@ -465,7 +525,7 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
       if (e.target.tagName === "INPUT" && !answered) return;
       if (!answered && /^[1-4]$/.test(e.key) && q.options) {
         const b = host.querySelectorAll("[data-id]")[+e.key - 1]; if (b) { b.click(); e.preventDefault(); }
-      } else if (answered && e.key === "Enter" && e.target.tagName !== "BUTTON") {
+      } else if (answered && e.key === "Enter" && (e.target.tagName !== "BUTTON" || e.target.closest(".map-ctrl"))) {
         e.preventDefault(); onNext();
       }
     }
