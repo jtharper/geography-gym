@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611181909";
+const VERSION = "202611181911";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -51,11 +51,9 @@ const TOPICS = [
     styles: ["choice", "type"], ask: "What do you call someone from here?", typeHolder: "Type the word, like French", modes: PQB },
   { id: "continents", group: "Trivia", name: "Which continent?", unit: "countries", set: "countries", kind: "fact", field: "r", altField: "conta", regions: ONE_REGION, terr: false, repeatAnswers: true,
     styles: ["choice", "type"], ask: "Which continent is it in?", typeHolder: "Type the continent", modes: PQB, mapPick: false },
-  { id: "driving", group: "Trivia", name: "Driving side", unit: "countries", set: "countries", kind: "fact", field: "drive", regions: WORLD_REGIONS, terr: true, repeatAnswers: true,
-    styles: ["choice"], ask: "Which side of the road do they drive on?", modes: PQB, mapPick: false },
-  { id: "landmarks", group: "Trivia", name: "Famous landmarks", unit: "landmarks", set: "trivia", kind: "text", field: "n", types: ["landmark"], photos: true, photoQ: true, regions: WORLD_REGIONS, terr: false,
+  { id: "landmarks", group: "Trivia", name: "Landmark → country", unit: "landmarks", set: "trivia", kind: "text", field: "n", types: ["landmark"], photos: true, photoQ: true, regions: WORLD_REGIONS, terr: false,
     styles: ["choice", "type"], ask: "Which country is it in?", typeHolder: "Type the country", modes: PQB },
-  { id: "landmark-photos", group: "Trivia", name: "Landmark photos", unit: "landmarks", set: "trivia", kind: "text", field: "n", types: ["landmark"], photos: true, photoQ: true, photoOnly: true, regions: WORLD_REGIONS, terr: false,
+  { id: "landmark-photos", group: "Trivia", name: "Name the landmark", unit: "landmarks", set: "trivia", kind: "text", field: "n", types: ["landmark"], photos: true, photoQ: true, photoOnly: true, regions: WORLD_REGIONS, terr: false,
     styles: ["choice", "type"], ask: "What is this landmark?", typeHolder: "Type the landmark", modes: PQB },
   { id: "former", group: "Trivia", name: "Former names", unit: "former names", set: "trivia", kind: "text", field: "n", types: ["former-country", "former-city"], regions: WORLD_REGIONS, terr: false,
     styles: ["choice", "type"], ask: "What's it called now?", typeHolder: "Type today's name", modes: PQB },
@@ -861,7 +859,7 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
     else if (def.kind === "feature") h += `<div class="q-head"><p class="prompt">${esc(def.ask)}</p></div><figure class="map main" data-map>${MAP_CONTROLS}<figcaption class="map-key"><span>Scroll or use + and − to zoom</span></figcaption></figure>`;
     else if (def.kind === "shape") h += `<div class="q-head"><div class="qflag qshape">${shapeSVG(it.id)}</div><p class="prompt">${esc(def.ask)}</p></div>`;
     else if (def.kind === "text") {
-      // Landmarks: a photo above the name; "Landmark photos" shows only the photo (or a hint if photos didn't load)
+      // Landmarks: a photo above the name; "Name the landmark" shows only the photo (or a hint if photos didn't load)
       const ph = it.photo ? `<figure class="qphoto loading${def.photoOnly ? " big" : ""}"><img src="${esc(it.photo.src)}" alt="${def.photoOnly ? "Mystery landmark" : esc(it.q)}"></figure>` : "";
       const the = /^(United|Netherlands|Philippines|Czech|Dominican|Central African|Bahamas|Gambia|Maldives|Marshall|Solomon)/.test(it.row.ans) ? "the " : "";
       const tile = def.photoOnly ? (it.photo ? "" : `<div class="qname">A landmark in ${the}${esc(it.row.ans)}</div>`) : textTile(it.q);

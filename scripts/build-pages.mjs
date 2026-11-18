@@ -26,7 +26,7 @@ const SLUG = {
   flags: 'flag-quiz', capitals: 'capitals-quiz', 'capitals-rev': 'capital-to-country-quiz', map: 'world-map-quiz', shapes: 'country-shapes-quiz',
   neighbors: 'neighboring-countries-quiz', area: 'country-size-quiz', population: 'population-quiz', landlocked: 'landlocked-countries-quiz',
   currencies: 'currency-quiz', languages: 'official-languages-quiz', domains: 'country-domains-quiz', phone: 'calling-codes-quiz',
-  demonyms: 'demonyms-quiz', continents: 'continents-quiz', driving: 'driving-side-quiz', landmarks: 'famous-landmarks-quiz', 'landmark-photos': 'landmark-photos-quiz', former: 'former-names-quiz',
+  demonyms: 'demonyms-quiz', continents: 'continents-quiz', landmarks: 'famous-landmarks-quiz', 'landmark-photos': 'landmark-photos-quiz', former: 'former-names-quiz',
   lakes: 'lakes-quiz', rivers: 'rivers-quiz', ranges: 'mountain-ranges-quiz', peaks: 'mountain-peaks-quiz', seas: 'seas-and-straits-quiz',
   'state-flags': 'us-state-flags-quiz', 'state-capitals': 'us-state-capitals-quiz', 'state-map': 'us-states-map-quiz', 'state-shapes': 'us-state-shapes-quiz',
   'state-abbr': 'us-state-abbreviations-quiz', 'state-nicknames': 'us-state-nicknames-quiz'
@@ -306,8 +306,8 @@ function artFor(t, rows) {
   if (t.kind === 'compare') return flagGrid('countries', ['CA', 'AU'], x, y + 90, w, h) + `<circle cx="${x + w / 2}" cy="${y + 90 + 94}" r="34" fill="${C.ink}"/><text x="${x + w / 2}" y="${y + 90 + 104}" text-anchor="middle" font-weight="800" font-size="28" fill="#fff">vs</text>`;
   if (t.kind === 'shape') return mapArt(t.set, x + 40, y, w - 80, h, { one: ONE[t.set] });
   if (t.kind === 'feature') return mapArt('countries', x - 40, y + 40, w + 60, h - 40, { feats: nature.filter(f => f.t === t.type) });
-  if (t.kind === 'locate' || t.kind === 'neighbors' || t.kind === 'odd' || t.set === 'trivia' || t.id === 'continents' || t.id === 'driving') {
-    const hi = t.kind === 'odd' ? rows.map(r => r.c) : t.id === 'driving' ? rowsOf('countries').filter(r => r.drive === 'Left').map(r => r.c)
+  if (t.kind === 'locate' || t.kind === 'neighbors' || t.kind === 'odd' || t.set === 'trivia' || t.id === 'continents') {
+    const hi = t.kind === 'odd' ? rows.map(r => r.c)
       : t.set === 'trivia' ? [...new Set(rows.map(r => r.cc))] : t.kind === 'neighbors' ? ['DE', 'FR', 'PL', 'AT', 'CH', 'CZ', 'BE', 'NL', 'LU', 'DK'] : rows.slice(0, 1).map(r => r.c);
     if (t.kind === 'neighbors') { const nb = rowsOf('countries').find(r => r.c === 'DE').nb; return mapArt('countries', x, y, w, h, { hi: ['DE'], hi2: nb, focus: ['DE', ...nb] }); }
     if (t.kind === 'locate') return mapArt(t.set, x - 40, y + 30, w + 60, h - 30, { hi: [LOCATE[t.set]] });

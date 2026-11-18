@@ -31,8 +31,6 @@ export const COPY = {
     'Someone from Monaco is Monégasque, someone from Lesotho is Mosotho. Learn the word for the people of every country.'],
   continents: ['Free continents quiz: which continent is each country in?',
     'Is Cyprus in Europe or Asia? Is Panama in North or South America? Place every country on its continent. Countries that sit on two continents accept either.'],
-  driving: ['Free driving side quiz: do they drive on the left or the right in each country?',
-    'About a third of the world drives on the left. Learn which countries do, from Japan and Kenya to Suriname and Cyprus.'],
   landmarks: ['Free famous landmarks quiz: which country is each landmark in? 95 landmarks with photos.',
     'Machu Picchu, Petra, Angkor Wat, the Sagrada Família: name the country for 95 famous landmarks, with a photo of each one and a map after you answer.'],
   'landmark-photos': ['Free landmark photo quiz: name 95 famous landmarks from a photo.',

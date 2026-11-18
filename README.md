@@ -23,9 +23,8 @@ Pick a topic from the menu at the top right. Topics are grouped into five tabs: 
 - **Currencies**, **Languages**, **Internet domains** and **Phone codes**.
 - **Demonyms**: what you call someone from each country (Comorian, Mosotho, Kittitian…).
 - **Which continent?** Countries on two continents (Russia, Turkey, Egypt…) accept both.
-- **Driving side**: left or right.
-- **Famous landmarks** (95): a photo and the name of the landmark; which country is it in?
-- **Landmark photos** (95): just the photo; name the landmark.
+- **Landmark → country** (95): a photo and the name of the landmark; which country is it in?
+- **Name the landmark** (95): just the photo; name the landmark.
 - **Former names** (67): Burma, Siam, Ceylon, Zaire… and cities like Bombay, Constantinople and Saigon, with the year they were renamed.
 
 **Nature**
@@ -143,7 +142,7 @@ Before committing a change to the site, run `npm run bump`. It stamps a new vers
 - Population: World Bank, via [datasets/population](https://github.com/datasets/population) (2025 figures).
 - US state and Canadian province flags: [region-flags](https://github.com/fonttools/region-flags) (public domain, from Wikimedia Commons), with Minnesota, Utah and Mississippi from [us-state-flags](https://www.npmjs.com/package/us-state-flags) (ISC).
 - Australian and German state flags: [niemela/flags](https://github.com/niemela/flags), from Wikimedia Commons (public domain).
-- Mountain peak locations and seas: [Natural Earth](https://www.naturalearthdata.com/) (public domain). Peak heights, landmarks, former names, driving sides and state nicknames were written for this game.
+- Mountain peak locations and seas: [Natural Earth](https://www.naturalearthdata.com/) (public domain). Peak heights, landmarks, former names and state nicknames were written for this game.
 - Demonyms and landlocked status: [world-countries](https://github.com/mledoze/countries).
 - Sounds (`public/sounds/`, trimmed): "Mission complete chime" by soundshelfstudio (right) and "Error mistake sound effect" by lesiakower (wrong), from [Pixabay](https://pixabay.com) under the Pixabay Content License.
 - Capital and landmark photos: the lead image of each city's or landmark's English Wikipedia article, loaded in the browser from the Wikipedia API. Each photo links to its article, where the image's author and license are listed.
