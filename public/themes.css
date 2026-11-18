@@ -18,7 +18,7 @@
 .look-title { font-size: 13px; font-weight: 700; color: var(--muted); padding: 0 2px; }
 .looks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .look-btn { display: grid; gap: 6px; padding: 8px; border-radius: 12px; border: 2px solid transparent; background: none; text-align: left; font-size: 14px; font-weight: 700; color: var(--ink); }
-.look-btn:hover { background: var(--bg); }
+@media (hover: hover) { .look-btn:hover { background: var(--bg); } }
 .look-btn[aria-pressed="true"] { border-color: var(--accent); }
 .look-sw { height: 40px; border-radius: 8px; display: flex; align-items: flex-end; gap: 4px; padding: 6px; border: 1px solid rgba(0, 0, 0, .12); }
 .look-sw i { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .15); }
@@ -35,7 +35,7 @@
 [data-skin="pop"] .flag { border: 2px solid #1a1423; }
 [data-skin="pop"] :is(.answer, .btn, .icon-btn, .menu-btn, .pair-card, .tile-stat, .map, .type-row input, .na-bar input, .tile-text, .tile-shape, .card-text, .card-shape, .pop, .mix-list li, .weak-list li, .qshape) { border: 2px solid #1a1423; box-shadow: 4px 4px 0 #1a1423; }
 [data-skin="pop"] :is(.answer, .btn, .icon-btn, .menu-btn, .pair-card) { transition: transform .08s, box-shadow .08s, background .12s; }
-[data-skin="pop"] :is(.answer, .btn, .icon-btn, .menu-btn, .pair-card):hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 #1a1423; border-color: #1a1423; }
+@media (hover: hover) { [data-skin="pop"] :is(.answer, .btn, .icon-btn, .menu-btn, .pair-card):hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 #1a1423; border-color: #1a1423; } }
 [data-skin="pop"] :is(.answer, .btn, .icon-btn, .menu-btn, .pair-card):active:not(:disabled) { transform: translate(3px, 3px); box-shadow: 1px 1px 0 #1a1423; }
 [data-skin="pop"] .answer { font-weight: 800; }
 [data-skin="pop"] .answer.right, [data-skin="pop"] .pair-card.right { background: #7ee2a8; color: #1a1423; border-color: #1a1423; }
@@ -67,7 +67,7 @@
 [data-skin="arcade"] .logo { color: #ff3cac; text-shadow: 0 0 12px rgba(255, 60, 172, .7); font-weight: 700; }
 [data-skin="arcade"] .qname, [data-skin="arcade"] .setup h1, [data-skin="arcade"] .score { color: #22e4ff; text-shadow: 0 0 14px rgba(34, 228, 255, .6); font-weight: 700; letter-spacing: 0; }
 [data-skin="arcade"] :is(.answer, .btn, .icon-btn, .menu-btn, .pair-card) { border: 2px solid #3a2f7a; transition: box-shadow .12s, border-color .12s; }
-[data-skin="arcade"] :is(.answer, .btn, .icon-btn, .menu-btn, .pair-card):hover:not(:disabled) { border-color: #ff3cac; box-shadow: 0 0 16px rgba(255, 60, 172, .55); }
+@media (hover: hover) { [data-skin="arcade"] :is(.answer, .btn, .icon-btn, .menu-btn, .pair-card):hover:not(:disabled) { border-color: #ff3cac; box-shadow: 0 0 16px rgba(255, 60, 172, .55); } }
 [data-skin="arcade"] .answer { font-weight: 400; font-size: 16px; }
 [data-skin="arcade"] .result-line { font-family: var(--font); }
 [data-skin="arcade"] .answer.right, [data-skin="arcade"] .pair-card.right { border-color: var(--good); box-shadow: 0 0 18px rgba(61, 255, 154, .5); }
@@ -101,7 +101,7 @@
 [data-skin="explorer"] .qflag .flag, [data-skin="explorer"] .pair-card .flag { border: 6px solid #fffaf0; outline: 1px solid #cdb98f; }
 [data-skin="explorer"] :is(.answer, .pair-card, .tile-stat, .map, .type-row input) { border: 1.5px solid #b9a172; }
 [data-skin="explorer"] .answer { font-weight: 600; font-size: 18px; }
-[data-skin="explorer"] .answer:hover:not(:disabled) { background: #fffaf0; border-color: var(--accent); }
+@media (hover: hover) { [data-skin="explorer"] .answer:hover:not(:disabled) { background: #fffaf0; border-color: var(--accent); } }
 [data-skin="explorer"] .map { box-shadow: inset 0 0 40px rgba(90, 60, 20, .25); }
 [data-skin="explorer"] .map-svg path { stroke-width: .8px; }
 [data-skin="explorer"] .qname, [data-skin="explorer"] .setup h1 { font-weight: 700; letter-spacing: -0.01em; }
@@ -124,7 +124,7 @@
 [data-skin="tropical"] body { background: linear-gradient(180deg, #f1fcf9 0%, #d3f3f0 55%, #c3ecf6 100%) fixed; }
 [data-skin="tropical"] .qflag .flag { border-radius: 18px; }
 [data-skin="tropical"] :is(.answer, .pair-card) { border-radius: 20px; border: 2px solid #b4e3da; box-shadow: 0 5px 0 #b4e3da; font-weight: 600; transition: transform .08s, box-shadow .08s; }
-[data-skin="tropical"] :is(.answer, .pair-card):hover:not(:disabled) { border-color: var(--accent); box-shadow: 0 5px 0 #ffb8a6; }
+@media (hover: hover) { [data-skin="tropical"] :is(.answer, .pair-card):hover:not(:disabled) { border-color: var(--accent); box-shadow: 0 5px 0 #ffb8a6; } }
 [data-skin="tropical"] :is(.answer, .pair-card):active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 #b4e3da; }
 [data-skin="tropical"] .answer.right, [data-skin="tropical"] .pair-card.right { box-shadow: 0 5px 0 #8fdcbf; }
 [data-skin="tropical"] .answer.wrong, [data-skin="tropical"] .pair-card.wrong { box-shadow: 0 5px 0 #f5a7b4; }
@@ -160,7 +160,7 @@
 [data-skin="chalk"] :is(.answer, .pair-card, .tile-stat, .map, .type-row input, .na-bar input) { border: 2px dashed rgba(244, 241, 232, .55); background: rgba(255, 255, 255, .04); }
 [data-skin="chalk"] :is(.btn, .icon-btn, .menu-btn) { border: 2px solid rgba(244, 241, 232, .55); background: transparent; }
 [data-skin="chalk"] .answer { font-weight: 400; font-size: 22px; }
-[data-skin="chalk"] .answer:hover:not(:disabled), [data-skin="chalk"] .pair-card:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+@media (hover: hover) { [data-skin="chalk"] .answer:hover:not(:disabled), [data-skin="chalk"] .pair-card:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); } }
 [data-skin="chalk"] .answer.right, [data-skin="chalk"] .pair-card.right { border-style: solid; border-color: var(--good); background: rgba(157, 242, 178, .12); }
 [data-skin="chalk"] .answer.wrong, [data-skin="chalk"] .pair-card.wrong { border-style: solid; border-color: var(--bad); background: rgba(255, 160, 143, .12); }
 [data-skin="chalk"] .btn.primary { background: var(--accent); color: #1f3a30; border-color: var(--accent); }
