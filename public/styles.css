@@ -63,6 +63,16 @@ h1, h2, h3 { margin: 0; line-height: 1.2; text-wrap: balance; }
 .logo svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .logo-mark { width: 30px; height: 30px; border-radius: 8px; flex: none; }
 .top-right { display: flex; align-items: center; gap: 12px; }
+/* Desktop and tablets: logo left, topic button in the middle, learned bar and settings on the right */
+@media (min-width: 641px) {
+  .top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .top .logo { justify-self: start; }
+  .top .topic-wrap { justify-self: center; }
+  .top .top-right { justify-self: end; }
+  .topic-wrap .menu { right: auto; left: 50%; transform: translateX(-50%); }
+  .progress-mini { white-space: nowrap; }
+}
+@media (min-width: 641px) and (max-width: 999px) { .progress-mini .bar { display: none; } .progress-mini { margin-right: 0; } }
 .progress-mini { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
 .progress-mini b { color: var(--ink); font-weight: 700; }
 .bar { width: 120px; height: 6px; border-radius: 99px; background: var(--track); overflow: hidden; }
