@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611181427";
+const VERSION = "202611181459";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -1348,7 +1348,7 @@ async function dailyQuestions(day) {
 }
 function shareText(day, r) {
   const d = new Date(day + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  return `Geography Gym daily · ${d}\n${r.s}/${r.n} in ${fmtTime(r.t)}\n${r.m.split("").map(c => c === "1" ? "🟩" : "🟥").join("")}\n${location.origin}/#daily`;
+  return `Geography Gym daily · ${d}\n${r.s}/${r.n} in ${fmtTime(r.t)}\n${r.m.split("").map(c => c === "1" ? "🟩" : "🟥").join("")}\n${location.origin}/daily/`;
 }
 async function copyText(text, btn) {
   try { await navigator.clipboard.writeText(text); }
@@ -1385,9 +1385,12 @@ const daily = {
       <div class="score">${r.s}<small> / ${r.n}</small></div>
       <div class="marks" aria-label="${r.s} right, ${r.n - r.s} wrong">${r.m.split("").map(c => `<span class="${c === "1" ? "ok" : "bad"}"></span>`).join("")}</div>
       <p>${fmtTime(r.t)}${streak ? ` · ${streak}-day streak` : ""}. A new challenge comes out at midnight.</p>
-      <button class="btn primary" type="button" id="dCopy">Copy result</button>
+      <div class="share-row">${navigator.share ? `<button class="btn primary" type="button" id="dShare">Share</button>` : ""}<button class="btn${navigator.share ? "" : " primary"}" type="button" id="dCopy">Copy result</button></div>
     </div>${list ? resultList(list, r.m.split("").map(c => c === "1")) : ""}`;
     $("#dCopy").addEventListener("click", e => copyText(shareText(day, r), e.currentTarget));
+    const sh = $("#dShare");
+    // Phones: the share sheet (Messages, WhatsApp…). The link in the text shows a preview card.
+    if (sh) sh.addEventListener("click", () => navigator.share({ text: shareText(day, r) }).catch(() => {}));
   }
 };
 

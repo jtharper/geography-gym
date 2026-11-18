@@ -7,9 +7,11 @@
   "scripts": {
     "data": "node scripts/build-data.mjs",
     "dev": "npx --yes serve public -l 8080",
-    "bump": "node scripts/bump.mjs"
+    "bump": "node scripts/bump.mjs && node scripts/build-pages.mjs",
+    "pages": "node scripts/build-pages.mjs"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "d3-geo": "^3.1.2",
     "flag-icons": "7.6.0",
     "region-flags": "1.1.0",

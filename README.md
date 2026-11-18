@@ -56,6 +56,20 @@ The gear button holds the settings for the current topic: region, answer style (
 
 Each topic keeps its own progress. To add a topic, add an entry to `TOPICS` at the top of `app.js`. If it needs new data, add it to `scripts/build-data.mjs`.
 
+## Pages for search engines and link previews
+
+The game itself is one page (`index.html`). So that each quiz can be found on Google and looks good when shared, `scripts/build-pages.mjs` also builds:
+
+- **A page for every topic**, like `/flag-quiz/` or `/us-state-capitals-quiz/`, with its own title and description, buttons into the game, and a full list of the answers.
+- **`/quizzes/`**: every topic on one page. It's linked from the bottom of the topic menu.
+- **`/daily/`**: the link the Daily challenge shares. It shows a preview card in chats and on social media, then sends visitors straight into today's challenge.
+- **Preview cards** (`/cards/*.png`, 1200×630) for every page, drawn from the game's own flags and maps.
+- **`sitemap.xml`** and **`robots.txt`**.
+
+The words for each topic page live in `scripts/topic-copy.mjs`. The page addresses are in `SLUG` in `scripts/build-pages.mjs`: don't change one after it's live, or search engines lose it.
+
+To get the pages into Google, add the site to [Google Search Console](https://search.google.com/search-console) and submit `https://geographyquiz.party/sitemap.xml`.
+
 ## Project layout
 
 ```
@@ -71,7 +85,11 @@ public/              ← the deployed site
   data/trivia.json                            ← landmarks and former names
   data/*-map.json    ← pre-projected map shapes
   _headers           ← Cloudflare Pages cache rules
+  pages.css          ← style for the topic pages
+  <topic>-quiz/, quizzes/, daily/, cards/, sitemap.xml, robots.txt  ← built by scripts/build-pages.mjs
 scripts/build-data.mjs  ← regenerates public/data/*
+scripts/build-pages.mjs ← topic pages, /quizzes/, /daily/, preview cards, sitemap (runs as part of npm run bump)
+scripts/topic-copy.mjs  ← the description and intro for each topic page
 ```
 
 ## Run locally
@@ -106,7 +124,7 @@ The script downloads a few files as it runs (population figures, Natural Earth o
 
 Every push to `main` deploys automatically. Pushes to other branches get their own preview URLs.
 
-Before committing a change to the site, run `npm run bump`. It stamps a new version on `app.js`, the stylesheets and the data files, so browsers never mix a new page with old cached code.
+Before committing a change to the site, run `npm run bump`. It stamps a new version on `app.js`, the stylesheets and the data files, so browsers never mix a new page with old cached code. It also rebuilds the topic pages, preview cards and sitemap.
 
 ## Credits
 
