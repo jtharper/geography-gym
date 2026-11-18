@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611181759";
+const VERSION = "202611181805";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -1155,7 +1155,7 @@ const quiz = (() => {
   const quizKey = () => ["quiz", poolKey(), len, T.pref.style].join("|");
   const bestText = b => b ? `Your best: ${b.s} / ${len} in ${fmtTenths(b.t)}` : "No best time yet for this one";
   function start(qs, full = true) {
-    run = { qs, i: 0, score: 0, misses: [], t0: Date.now(), full };
+    run = { qs, i: 0, score: 0, misses: [], marks: [], t0: Date.now(), full };
     stopTimer(); timer = setInterval(() => { const el = $("#qTime"); if (el && run) el.textContent = fmtTenths((Date.now() - run.t0) / 1000); }, 100);
     ask();
   }
@@ -1170,6 +1170,7 @@ const quiz = (() => {
       onAnswer(ok, picked) {
         if (!q.compare) grade(q.it.id, ok);
         if (ok) run.score++; else run.misses.push({ q, p: picked });
+        run.marks.push(ok ? 1 : 0);
         host().querySelector(".qtrack span").style.width = (100 * (run.i + 1) / run.qs.length) + "%";
       },
       onNext() { run.i++; ask(); }
@@ -1201,9 +1202,19 @@ const quiz = (() => {
       ${bestLine}
       ${run.misses.length && def.kind !== "compare" ? `<button class="btn primary" type="button" id="qRetry">Retry the ${run.misses.length} you missed</button>` : ""}
       <button class="btn${run.misses.length ? "" : " primary"}" type="button" id="qAgain" style="width:100%">New quiz</button>
+      ${run.full ? `<div class="share-row split" id="qShareRow"></div>` : ""}
     </div>
     ${run.misses.length ? `<div class="misses">${run.misses.map(missFig).join("")}</div>` : ""}`;
     $("#qAgain").addEventListener("click", setup);
+    if (run.full) {
+      // Share your score and time: the picture and a link straight to this quiz
+      const region = T.pref.region === "All" ? "" : T.pref.region, m = run.marks.join("");
+      const title = /quiz$/i.test(def.name) ? def.name : def.name + " quiz";
+      const url = `${location.origin}/#${def.id}-quiz`;
+      const text = `GeoGym · ${title}${region ? ` (${region})` : ""}\n${run.score}/${total} in ${fmtTenths(secs)}${total <= 20 ? "\n" + m.split("").map(c => c === "1" ? "🟩" : "🟥").join("") : ""}\n${url}`;
+      shareButtons($("#qShareRow"), { text, url, plain: true, card: () => shareCard({ title: title.replace(" → ", " to "), sub: ["GeoGym quiz", region, `${total} questions`].filter(Boolean).join(" · "),
+        s: run.score, n: total, time: fmtTenths(secs), m, foot: location.host, name: "geogym-quiz.png" }) });
+    }
     const r = $("#qRetry");
     if (r) r.addEventListener("click", () => start(shuffle(run.misses.map(m => m.q.compare ? makeCompare(m.q.a, m.q.b) : makeQuestion(m.q.it, T.pref.style))), false));
   }
@@ -1434,24 +1445,49 @@ function shareText(day, r) {
   const d = new Date(day + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
   return `GeoGym Daily Challenge · ${d}\n${r.s}/${r.n} in ${fmtTime(r.t)}\n${r.m.split("").map(c => c === "1" ? "🟩" : "🟥").join("")}\n${location.origin}/daily/`;
 }
-// A picture of the result for the share sheet (it shows as the preview, and Messages or Snapchat send it with the text)
+// A picture of the result for the share sheet (it shows as the preview, and Messages or Snapchat send it with the link)
 async function shareImage(day, r) {
+  return shareCard({ title: "GeoGym Daily Challenge", sub: niceDay(day), s: r.s, n: r.n, time: fmtTime(r.t), m: r.m, foot: location.host + "/daily", name: "geogym-daily.png" });
+}
+// 1080×1080 card: logo, title, subtitle, big score, time, up to 20 green/red squares (two rows past 10), link
+async function shareCard({ title, sub, s, n, time, m, foot, name }) {
   const S = 1080, c = document.createElement("canvas"); c.width = c.height = S;
   const g = c.getContext("2d");
   try { await Promise.all(["600 40px Manrope", "800 80px Manrope"].map(f => document.fonts.load(f))); } catch (e) {}
   const logo = await new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = "logo.svg"; });
+  const fit = (text, weight, size, max) => { do { g.font = `${weight} ${size}px Manrope, sans-serif`; size -= 2; } while (g.measureText(text).width > max && size > 20); };
   g.fillStyle = "#15171c"; g.fillRect(0, 0, S, S);
   if (logo) g.drawImage(logo, S / 2 - 90, 90, 180, 180);
   g.textAlign = "center"; g.fillStyle = "#ffffff";
-  g.font = "800 64px Manrope, sans-serif"; g.fillText("GeoGym Daily Challenge", S / 2, 360);
-  g.fillStyle = "#9aa0aa"; g.font = "600 38px Manrope, sans-serif"; g.fillText(niceDay(day), S / 2, 420);
-  g.fillStyle = "#ffffff"; g.font = "800 230px Manrope, sans-serif"; g.fillText(`${r.s}/${r.n}`, S / 2, 660);
-  g.fillStyle = "#9aa0aa"; g.font = "600 44px Manrope, sans-serif"; g.fillText(`in ${fmtTime(r.t)}`, S / 2, 730);
-  const n = r.m.length, sz = 70, gap = 14, x0 = (S - (n * sz + (n - 1) * gap)) / 2;
-  r.m.split("").forEach((m, i) => { g.fillStyle = m === "1" ? "#1f9d55" : "#e5484d"; g.beginPath(); g.roundRect ? g.roundRect(x0 + i * (sz + gap), 800, sz, sz, 14) : g.rect(x0 + i * (sz + gap), 800, sz, sz); g.fill(); });
-  g.fillStyle = "#7aa2ff"; g.font = "700 40px Manrope, sans-serif"; g.fillText(location.host + "/daily", S / 2, 1000);
+  fit(title, 800, 64, S - 120); g.fillText(title, S / 2, 360);
+  g.fillStyle = "#9aa0aa"; fit(sub, 600, 38, S - 120); g.fillText(sub, S / 2, 420);
+  g.fillStyle = "#ffffff"; g.font = "800 230px Manrope, sans-serif"; g.fillText(`${s}/${n}`, S / 2, 660);
+  g.fillStyle = "#9aa0aa"; g.font = "600 44px Manrope, sans-serif"; g.fillText(`in ${time}`, S / 2, 730);
+  if (m && m.length <= 20) {
+    const rows = m.length > 10 ? [m.slice(0, Math.ceil(m.length / 2)), m.slice(Math.ceil(m.length / 2))] : [m];
+    const sz = rows.length > 1 ? 58 : 70, gap = rows.length > 1 ? 12 : 14;
+    rows.forEach((row, ri) => {
+      const x0 = (S - (row.length * sz + (row.length - 1) * gap)) / 2, y = (rows.length > 1 ? 780 : 800) + ri * (sz + gap);
+      row.split("").forEach((ch, i) => { g.fillStyle = ch === "1" ? "#1f9d55" : "#e5484d"; g.beginPath(); g.roundRect ? g.roundRect(x0 + i * (sz + gap), y, sz, sz, 14) : g.rect(x0 + i * (sz + gap), y, sz, sz); g.fill(); });
+    });
+  }
+  g.fillStyle = "#7aa2ff"; g.font = "700 40px Manrope, sans-serif"; g.fillText(foot, S / 2, 1010);
   const blob = await new Promise(res => c.toBlob(res, "image/png"));
-  return blob ? new File([blob], "geogym-daily.png", { type: "image/png" }) : null;
+  return blob ? new File([blob], name, { type: "image/png" }) : null;
+}
+// Share + Copy result buttons. The picture is made right away, so the tap can open the share sheet at once (phones require that).
+// Share sends just the picture and the link; Copy result copies the text version.
+function shareButtons(host, { text, card, url, plain = false }) {
+  host.innerHTML = `${navigator.share ? `<button class="btn${plain ? "" : " primary"}" type="button" data-share>Share</button>` : ""}<button class="btn${navigator.share || plain ? "" : " primary"}" type="button" data-copy>Copy result</button>`;
+  host.querySelector("[data-copy]").addEventListener("click", e => copyText(text, e.currentTarget));
+  const sh = host.querySelector("[data-share]");
+  if (!sh) return;
+  let file = null;
+  card().then(f => { file = f; }).catch(() => {});
+  sh.addEventListener("click", () => {
+    const data = file && navigator.canShare && navigator.canShare({ files: [file], url }) ? { files: [file], url } : { url };
+    navigator.share(data).catch(e => { if (data.files && e && e.name !== "AbortError") navigator.share({ url }).catch(() => {}); });
+  });
 }
 async function copyText(text, btn) {
   try { await navigator.clipboard.writeText(text); }
@@ -1496,22 +1532,9 @@ const daily = {
       <div class="score">${r.s}<small> / ${r.n}</small></div>
       <div class="marks" aria-label="${r.s} right, ${r.n - r.s} wrong">${r.m.split("").map(c => `<span class="${c === "1" ? "ok" : "bad"}"></span>`).join("")}</div>
       <p>${fmtTime(r.t)}${streak ? ` · ${streak}-day streak` : ""}. A new challenge comes out at midnight.</p>
-      <div class="share-row">${navigator.share ? `<button class="btn primary" type="button" id="dShare">Share</button>` : ""}<button class="btn${navigator.share ? "" : " primary"}" type="button" id="dCopy">Copy result</button></div>
+      <div class="share-row" id="dShareRow"></div>
     </div>${list ? resultList(list, r.m.split("").map(c => c === "1")) : ""}`;
-    $("#dCopy").addEventListener("click", e => copyText(shareText(day, r), e.currentTarget));
-    const sh = $("#dShare");
-    // Phones: the share sheet (Messages, WhatsApp…) with a picture of the result.
-    // The picture is made now, so the tap can open the share sheet straight away (phones require that).
-    if (sh) {
-      let file = null;
-      shareImage(day, r).then(f => { file = f; }).catch(() => {});
-      // Just the picture and the link (the picture already shows the score), no text
-      sh.addEventListener("click", () => {
-        const url = location.origin + "/daily/";
-        const data = file && navigator.canShare && navigator.canShare({ files: [file], url }) ? { files: [file], url } : { url };
-        navigator.share(data).catch(e => { if (data.files && e && e.name !== "AbortError") navigator.share({ url }).catch(() => {}); });
-      });
-    }
+    shareButtons($("#dShareRow"), { text: shareText(day, r), card: () => shareImage(day, r), url: location.origin + "/daily/" });
   }
 };
 

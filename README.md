@@ -49,7 +49,7 @@ In Practice, after every answer, a map zooms to the place, highlighted in blue. 
 ## Modes
 
 - **Practice**: endless spaced repetition. Things you miss come back sooner, and an item counts as learned after 3 correct answers in a row.
-- **Quiz**: a race against the clock, 10, 20, 50 or all of them. Every place comes up once, the same answer never repeats (one Euro question, not twenty) and of two identical flags only one appears. Answers move straight on (no map), the clock shows tenths of a second, and your best score and time are saved for each topic, region, length and answer style. Retry the ones you missed at the end.
+- **Quiz**: a race against the clock, 10, 20, 50 or all of them. Every place comes up once, the same answer never repeats (one Euro question, not twenty) and of two identical flags only one appears. Answers move straight on (no map), the clock shows tenths of a second, and your best score and time are saved for each topic, region, length and answer style. Retry the ones you missed at the end. **Share** sends a picture of your score and time (with green and red squares for up to 20 questions) and a link to the same quiz; **Copy result** copies it as text.
 - **Name them**: type every one you can think of. The clock is running.
 - **Browse**: a gallery you can search. Country flags also has a look-alikes section for flags that are easy to mix up.
 

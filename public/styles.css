@@ -480,6 +480,8 @@ body.special #modeNav, body.special .gear-wrap { display: none; }
 .menu-all { display: block; margin-top: 6px; padding: 10px 12px 4px; border-top: 1px solid var(--line); font-size: 13px; font-weight: 700; color: var(--muted); text-decoration: none; }
 .menu-all:hover { color: var(--ink); }
 .share-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.share-row.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); width: 100%; }
+.share-row.split .btn { width: 100%; }
 
 /* Phones: once a Practice/Review/Daily question is answered, everything fits one screen.
    The question itself is hidden (its flag shows in the map's corner), the answers shrink,
