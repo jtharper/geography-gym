@@ -14,14 +14,24 @@ Pick a topic from the menu at the top right. Topics are grouped by tabs.
 - **Find it on the map**: click the country. Tiny countries get a dot you can click.
 - **Country shapes**: name the country from its outline.
 - **Neighbors**: pick a country that borders it.
-- **Currencies**, **Languages**, **Internet domains** and **Phone codes**.
 - **Bigger or smaller** (area) and **More or fewer people** (population): pick the larger of two. Your best streak is saved.
+- **Landlocked countries**: pick the one of four countries with no coastline (or name them all).
+
+**Trivia**
+- **Currencies**, **Languages**, **Internet domains** and **Phone codes**.
+- **Demonyms**: what you call someone from each country (Comorian, Mosotho, Kittitian…).
+- **Which continent?** Countries on two continents (Russia, Turkey, Egypt…) accept both.
+- **Driving side**: left or right.
+- **Famous landmarks** (95): which country is it in? In Practice, a photo of the landmark appears after you answer.
+- **Former names** (67): Burma, Siam, Ceylon, Zaire… and cities like Bombay, Constantinople and Saigon, with the year they were renamed.
 
 **Nature**
 - **Lakes** (58), **Rivers** (59) and **Mountain ranges** (42), each highlighted on the world map.
+- **Mountain peaks** (55), marked on the map, with their height.
+- **Seas and straits** (82): seas, gulfs, bays, straits and channels, from the Mediterranean to the Bosporus.
 
 **United States**
-- **State flags** (current as of 2026, including Minnesota's and Utah's 2024 flags and Mississippi's 2021 flag), **State capitals**, **Find states on the map**, **State shapes** and **State abbreviations**.
+- **State flags** (current as of 2026, including Minnesota's and Utah's 2024 flags and Mississippi's 2021 flag), **State capitals**, **Find states on the map**, **State shapes** and **State abbreviations** and **State nicknames** (the Beehive State, the Show-Me State…).
 
 **Canada, Australia, Germany and Mexico**
 - Flags (Canada, Australia, Germany), capitals, find on the map and shapes for every province, state and territory. Canada and Australia also have abbreviations. Mexico's states have no official flags, so Mexico has no flag topic.
@@ -57,7 +67,8 @@ public/              ← the deployed site
   data/countries.json, data/flags.json        ← countries and their flags
   data/states.json, data/state-flags.json     ← US states
   data/ca|au|de|mx.json, data/*-flags.json    ← provinces and states of Canada, Australia, Germany, Mexico
-  data/nature.json                            ← lakes, rivers, mountain ranges
+  data/nature.json                            ← lakes, rivers, mountain ranges, peaks, seas and straits
+  data/trivia.json                            ← landmarks and former names
   data/*-map.json    ← pre-projected map shapes
   _headers           ← Cloudflare Pages cache rules
 scripts/build-data.mjs  ← regenerates public/data/*
@@ -105,5 +116,7 @@ Before committing a change to the site, run `npm run bump`. It stamps a new vers
 - Population: World Bank, via [datasets/population](https://github.com/datasets/population) (2025 figures).
 - US state and Canadian province flags: [region-flags](https://github.com/fonttools/region-flags) (public domain, from Wikimedia Commons), with Minnesota, Utah and Mississippi from [us-state-flags](https://www.npmjs.com/package/us-state-flags) (ISC).
 - Australian and German state flags: [niemela/flags](https://github.com/niemela/flags), from Wikimedia Commons (public domain).
-- Capital photos: the lead image of each city's English Wikipedia article, loaded in the browser from the Wikipedia API. Each photo links to its article, where the image's author and license are listed.
+- Mountain peak locations and seas: [Natural Earth](https://www.naturalearthdata.com/) (public domain). Peak heights, landmarks, former names, driving sides and state nicknames were written for this game.
+- Demonyms and landlocked status: [world-countries](https://github.com/mledoze/countries).
+- Capital and landmark photos: the lead image of each city's or landmark's English Wikipedia article, loaded in the browser from the Wikipedia API. Each photo links to its article, where the image's author and license are listed.
 - Maps: [world-atlas](https://github.com/topojson/world-atlas) and [Natural Earth](https://www.naturalearthdata.com/) (public domain) for the world, lakes, rivers, mountain ranges and provinces; [us-atlas](https://github.com/topojson/us-atlas) (US Census Bureau, public domain) for the US.

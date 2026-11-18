@@ -61,6 +61,13 @@ const phoneOf = c => {
 const FLAG_OVERRIDE = { CR: 'https://raw.githubusercontent.com/niemela/flags/master/data/CR_state.svg' };
 const flagOverride = {};
 for (const [code, url] of Object.entries(FLAG_OVERRIDE)) flagOverride[code] = await (await fetch(url)).text();
+// Countries that drive on the left (everything else drives on the right)
+const LEFT = new Set(('AG AU BS BD BB BT BW BN CY DM FJ GD GY IN ID IE JM JP KE KI LS MW MY MV MT MU MZ NA NR NP NZ PK PG KN LC VC WS SC SG SB ZA LK SR SZ TZ TH TL TO TT TV UG GB ZM ZW ' +
+  'AI BM VG KY FK GG IM JE MS SH TC CK NU NF PN HK MO VI CC CX TK').split(' '));
+// Other accepted spellings of demonyms
+const DEMONYM_ALTS = { KM: ['Comorian'], LS: ['Basotho', 'Lesothan'], BW: ['Batswana', 'Botswanan'], GB: ['Briton'], NL: ['Netherlander'], PH: ['Philippine'], MG: ['Madagascan'], CI: ['Ivoirian'], US: ['US American'] };
+// Countries that sit on two continents: the other one is also accepted
+const ALSO_CONTINENT = { RU: 'Asia', TR: 'Europe', KZ: 'Europe', AZ: 'Europe', GE: 'Europe', AM: 'Europe', CY: 'Asia', EG: 'Asia', PA: 'South America' };
 const countries = [], flags = [];
 for (const c of all) {
   const code = c.cca2;
@@ -78,7 +85,9 @@ for (const c of all) {
     c: code, n: c.name.common, a: [...alt].filter(x => x !== c.name.common), r: regionOf(c), sr: c.subregion, cap: caps[0] || '', caps, k: kind,
     cur, lang, tld: (c.tld || [])[0] || '', ph: phoneOf(c),
     nb: (c.borders || []).map(x => cca3to2[x]).filter(x => x && (extraCountries.includes(x) || all.find(y => y.cca2 === x && (y.unMember || territories.includes(x))))),
-    area: c.area < 10 ? Math.round(c.area * 100) / 100 : Math.round(c.area), pop: pop ? pop.v : null, popY: pop ? pop.y : null
+    area: c.area < 10 ? Math.round(c.area * 100) / 100 : Math.round(c.area), pop: pop ? pop.v : null, popY: pop ? pop.y : null,
+    dem: (c.demonyms && c.demonyms.eng && c.demonyms.eng.m) || '', dems: [...(c.demonyms && c.demonyms.eng && c.demonyms.eng.f !== c.demonyms.eng.m ? [c.demonyms.eng.f] : []), ...(DEMONYM_ALTS[code] || [])],
+    drive: LEFT.has(code) ? 'Left' : 'Right', ll: !!c.landlocked, conta: ALSO_CONTINENT[code] ? [ALSO_CONTINENT[code]] : []
   });
 }
 countries.sort((a, b) => a.n.localeCompare(b.n));
@@ -109,6 +118,17 @@ const STATES = [
   ['VA', 'Virginia', 'Richmond', 'South'], ['WA', 'Washington', 'Olympia', 'West'], ['WV', 'West Virginia', 'Charleston', 'South'],
   ['WI', 'Wisconsin', 'Madison', 'Midwest'], ['WY', 'Wyoming', 'Cheyenne', 'West']
 ];
+// Best-known nickname of each state (other common ones are accepted when typed)
+const NICK = {
+  AL: 'Yellowhammer State', AK: 'The Last Frontier', AZ: 'Grand Canyon State', AR: 'The Natural State', CA: 'Golden State', CO: 'Centennial State',
+  CT: 'Constitution State', DE: 'First State', FL: 'Sunshine State', GA: 'Peach State', HI: 'Aloha State', ID: 'Gem State', IL: 'Prairie State',
+  IN: 'Hoosier State', IA: 'Hawkeye State', KS: 'Sunflower State', KY: 'Bluegrass State', LA: 'Pelican State', ME: 'Pine Tree State',
+  MD: 'Old Line State', MA: 'Bay State', MI: 'Great Lakes State', MN: 'North Star State', MS: 'Magnolia State', MO: 'Show-Me State',
+  MT: 'Treasure State', NE: 'Cornhusker State', NV: 'Silver State', NH: 'Granite State', NJ: 'Garden State', NM: 'Land of Enchantment',
+  NY: 'Empire State', NC: 'Tar Heel State', ND: 'Peace Garden State', OH: 'Buckeye State', OK: 'Sooner State', OR: 'Beaver State',
+  PA: 'Keystone State', RI: 'Ocean State', SC: 'Palmetto State', SD: 'Mount Rushmore State', TN: 'Volunteer State', TX: 'Lone Star State',
+  UT: 'Beehive State', VT: 'Green Mountain State', VA: 'Old Dominion', WA: 'Evergreen State', WV: 'Mountain State', WI: 'Badger State', WY: 'Equality State'
+};
 const stateCapAlts = { MN: ['St. Paul'], NV: ['Carson'], UT: ['Salt Lake'], MO: ['Jefferson'], OK: ['Oklahoma'] };
 // Flags changed since region-flags was published (2022): take these from us-state-flags instead.
 const NEWER = ['MN', 'UT', 'MS'];
@@ -122,7 +142,7 @@ const states = [], stateFlags = [];
 for (const [code, n, cap, r] of STATES) {
   const raw = NEWER.includes(code) ? fromUsStateFlags(code) : fs.readFileSync(`node_modules/region-flags/svg/US-${code}.svg`, 'utf8');
   stateFlags.push({ c: code, s: optimize(raw, { multipass: true, floatPrecision: 1, plugins: ['preset-default', 'removeDimensions'] }).data });
-  states.push({ c: code, n, a: [], r, cap, caps: [cap, ...(stateCapAlts[code] || [])], k: 'state' });
+  states.push({ c: code, n, a: [], r, cap, caps: [cap, ...(stateCapAlts[code] || [])], k: 'state', nick: NICK[code] });
 }
 fs.writeFileSync('public/data/states.json', JSON.stringify(states));
 writeImages('public/data/state-flags.json', stateFlags);
@@ -293,13 +313,196 @@ function buildFeatures(list, source, type, cla) {
   }
   return out;
 }
+/* Mountain peaks: [name, Natural Earth name (for the location), other names, height in m, countries, [lon, lat] if Natural Earth lacks it] */
+const PEAKS = [
+  ['Mount Everest', 'Mount Everest', ['Everest', 'Sagarmatha', 'Chomolungma'], 8849, ['NP', 'CN']],
+  ['K2', 'K2', ['Mount Godwin-Austen', 'Chhogori'], 8611, ['PK', 'CN']],
+  ['Kangchenjunga', 'Kanchenjunga', ['Kanchenjunga'], 8586, ['NP', 'IN']],
+  ['Dhaulagiri', 'Dhaulagiri', [], 8167, ['NP']],
+  ['Annapurna', null, ['Annapurna I'], 8091, ['NP'], [83.82, 28.6]],
+  ['Nanga Parbat', 'Nanga Parbat', [], 8126, ['PK']],
+  ['Nanda Devi', 'Nanda Devi', [], 7816, ['IN']],
+  ['Ismoil Somoni Peak', 'Pik Imeni Ismail Samani', ['Ismail Samani Peak', 'Communism Peak'], 7495, ['TJ']],
+  ['Jengish Chokusu', 'Pik Pobeda', ['Victory Peak', 'Pik Pobeda'], 7439, ['KG', 'CN']],
+  ['Mount Kailash', 'Kailash', ['Kailash'], 6638, ['CN']],
+  ['Aconcagua', 'Cerro Aconcagua', ['Cerro Aconcagua'], 6961, ['AR']],
+  ['Ojos del Salado', 'Nevado Ojos del Salado', [], 6893, ['AR', 'CL']],
+  ['Huascarán', 'Nevado Huascarán', ['Huascaran'], 6768, ['PE']],
+  ['Illimani', 'Nevado Illimani', [], 6438, ['BO']],
+  ['Chimborazo', 'Chimborazo', [], 6263, ['EC']],
+  ['Cotopaxi', null, [], 5897, ['EC'], [-78.44, -0.68]],
+  ['Pico Bolívar', 'Pico Bolívar', ['Pico Bolivar'], 4978, ['VE']],
+  ['Denali', 'Denali', ['Mount McKinley'], 6190, ['US']],
+  ['Mount Logan', 'Mount Logan', ['Logan'], 5959, ['CA']],
+  ['Pico de Orizaba', 'Pico de Orizaba', ['Citlaltépetl', 'Orizaba'], 5636, ['MX']],
+  ['Popocatépetl', 'Volcán Popocatépetl', ['Popocatepetl'], 5426, ['MX']],
+  ['Mount Whitney', 'Mount Whitney', ['Whitney'], 4421, ['US']],
+  ['Mount Elbert', 'Mount Elbert', ['Elbert'], 4401, ['US']],
+  ['Mount Rainier', 'Mount Rainier', ['Rainier', 'Tahoma'], 4392, ['US']],
+  ['Mauna Kea', 'Mauna Kea', [], 4207, ['US']],
+  ['Mount Hood', null, ['Hood'], 3429, ['US'], [-121.7, 45.37]],
+  ['Mount St. Helens', null, ['Mount Saint Helens', 'St Helens'], 2549, ['US'], [-122.19, 46.19]],
+  ['Mount Washington', null, [], 1917, ['US'], [-71.3, 44.27]],
+  ['Kilimanjaro', 'Mount Kilimanjaro', ['Mount Kilimanjaro', 'Kibo'], 5895, ['TZ']],
+  ['Mount Kenya', 'Mount Kenya', [], 5199, ['KE']],
+  ['Mount Stanley', 'Mount Stanley', ['Rwenzori', 'Margherita Peak'], 5109, ['CD', 'UG']],
+  ['Mount Elgon', 'Mount Elgon', ['Elgon'], 4321, ['UG', 'KE']],
+  ['Ras Dashen', 'Ras Dejen', ['Ras Dejen'], 4550, ['ET']],
+  ['Toubkal', 'Jebel Toubkal', ['Jebel Toubkal'], 4167, ['MA']],
+  ['Mount Cameroon', null, [], 4040, ['CM'], [9.17, 4.2]],
+  ['Table Mountain', null, [], 1085, ['ZA'], [18.4, -33.96]],
+  ['Mount Sinai', null, ['Jabal Musa'], 2285, ['EG'], [33.97, 28.54]],
+  ['Mount Elbrus', 'Gora Elbrus', ['Elbrus'], 5642, ['RU']],
+  ['Mont Blanc', 'Mont Blanc', ['Monte Bianco'], 4806, ['FR', 'IT']],
+  ['Matterhorn', 'Matterhorn', ['Monte Cervino', 'Cervin'], 4478, ['CH', 'IT']],
+  ['Zugspitze', null, [], 2962, ['DE', 'AT'], [10.98, 47.42]],
+  ['Mount Olympus', null, ['Olympus'], 2918, ['GR'], [22.36, 40.09]],
+  ['Mount Etna', null, ['Etna'], 3357, ['IT'], [14.99, 37.75]],
+  ['Mount Vesuvius', null, ['Vesuvius'], 1281, ['IT'], [14.43, 40.82]],
+  ['Ben Nevis', null, [], 1345, ['GB'], [-5.0, 56.8]],
+  ['Mount Ararat', 'Mount Ararat', ['Ararat', 'Ağrı Dağı'], 5137, ['TR']],
+  ['Mount Damavand', 'Mount Damavand', ['Damavand'], 5609, ['IR']],
+  ['Klyuchevskaya Sopka', 'Klyuchevskaya Sopka', ['Klyuchevskaya'], 4754, ['RU']],
+  ['Mount Fuji', null, ['Fuji', 'Fujisan'], 3776, ['JP'], [138.73, 35.36]],
+  ['Mount Kinabalu', 'Gunung Kinabalu', ['Kinabalu'], 4095, ['MY']],
+  ['Mayon', null, ['Mayon Volcano', 'Mount Mayon'], 2463, ['PH'], [123.69, 13.26]],
+  ['Puncak Jaya', 'Puncak Jaya', ['Carstensz Pyramid'], 4884, ['ID']],
+  ['Mount Wilhelm', 'Mount Wilhelm', [], 4509, ['PG']],
+  ['Aoraki / Mount Cook', null, ['Mount Cook', 'Aoraki'], 3724, ['NZ'], [170.14, -43.59]],
+  ['Mount Kosciuszko', null, ['Kosciuszko', 'Kosciusko'], 2228, ['AU'], [148.26, -36.46]]
+];
+const slug = (t, n) => t + '-' + n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const neElev = await getJSON('ne_10m_geography_regions_elevation_points.geojson');
+const pointFeature = (t, n, alts, lonlat, cc, extra) => {
+  const [x, y] = proj(lonlat).map(r1);
+  return { c: slug(t, n), n, a: alts, t, r: regionByCode[cc[0]], cc, b: [x, y, x, y], p: [x, y], ...extra };
+};
+const peaks = PEAKS.map(([n, ne, alts, el, cc, ll]) => {
+  const f = ne && neElev.features.find(f => f.properties.name === ne);
+  if (ne && !f) console.warn('  missing peak', n);
+  const lonlat = ll || f.geometry.coordinates;
+  return pointFeature('peak', n, alts, lonlat, cc, { el });
+});
+
+/* Seas, gulfs and straits: [name, Natural Earth name, other names, region, kind] (Natural Earth 1:50m, straits from 1:10m) */
+const SEAS = [
+  ['Mediterranean Sea', 'Mediterranean Sea', ['Mediterranean'], 'Europe', 'sea'], ['Caribbean Sea', 'Caribbean Sea', ['Caribbean'], 'North America', 'sea'],
+  ['Red Sea', 'Red Sea', [], 'Africa', 'sea'], ['Black Sea', 'Black Sea', [], 'Europe', 'sea'], ['Baltic Sea', 'Baltic Sea', ['Baltic'], 'Europe', 'sea'],
+  ['North Sea', 'North Sea', [], 'Europe', 'sea'], ['Norwegian Sea', 'Norwegian Sea', [], 'Europe', 'sea'], ['Barents Sea', 'Barents Sea', [], 'Europe', 'sea'],
+  ['Irish Sea', 'Irish Sea', [], 'Europe', 'sea'], ['White Sea', 'White Sea', [], 'Europe', 'sea'], ['Adriatic Sea', 'Adriatic Sea', ['Adriatic'], 'Europe', 'sea'],
+  ['Aegean Sea', 'Aegean Sea', ['Aegean'], 'Europe', 'sea'], ['Ionian Sea', 'Ionian Sea', [], 'Europe', 'sea'], ['Tyrrhenian Sea', 'Tyrrhenian Sea', [], 'Europe', 'sea'],
+  ['Arabian Sea', 'Arabian Sea', [], 'Asia', 'sea'], ['Andaman Sea', 'Andaman Sea', [], 'Asia', 'sea'], ['South China Sea', 'South China Sea', [], 'Asia', 'sea'],
+  ['East China Sea', 'East China Sea', [], 'Asia', 'sea'], ['Yellow Sea', 'Yellow Sea', [], 'Asia', 'sea'], ['Sea of Japan', 'Sea of Japan', ['East Sea'], 'Asia', 'sea'],
+  ['Sea of Okhotsk', 'Sea of Okhotsk', ['Okhotsk'], 'Asia', 'sea'], ['Philippine Sea', 'Philippine Sea', [], 'Asia', 'sea'], ['Java Sea', 'Java Sea', [], 'Asia', 'sea'],
+  ['Celebes Sea', 'Celebes Sea', ['Sulawesi Sea'], 'Asia', 'sea'], ['Kara Sea', 'Kara Sea', [], 'Asia', 'sea'], ['Laptev Sea', 'Laptev Sea', [], 'Asia', 'sea'],
+  ['Bering Sea', 'Bering Sea', [], 'North America', 'sea'], ['Chukchi Sea', 'Chukchi Sea', [], 'North America', 'sea'], ['Beaufort Sea', 'Beaufort Sea', [], 'North America', 'sea'],
+  ['Labrador Sea', 'Labrador Sea', [], 'North America', 'sea'], ['Greenland Sea', 'Greenland Sea', [], 'North America', 'sea'], ['Sargasso Sea', 'Sargasso Sea', [], 'North America', 'sea'],
+  ['Coral Sea', 'Coral Sea', [], 'Oceania', 'sea'], ['Tasman Sea', 'Tasman Sea', [], 'Oceania', 'sea'], ['Arafura Sea', 'Arafura Sea', [], 'Oceania', 'sea'],
+  ['Gulf of Mexico', 'Gulf of Mexico', [], 'North America', 'sea'], ['Gulf of California', 'Gulf of California', ['Sea of Cortez'], 'North America', 'sea'],
+  ['Gulf of Alaska', 'Gulf of Alaska', [], 'North America', 'sea'], ['Gulf of Saint Lawrence', 'Gulf of Saint Lawrence', ['Gulf of St. Lawrence'], 'North America', 'sea'],
+  ['Hudson Bay', 'Hudson Bay', [], 'North America', 'sea'], ['Baffin Bay', 'Baffin Bay', [], 'North America', 'sea'], ['Bay of Fundy', 'Bay of Fundy', [], 'North America', 'sea'],
+  ['Río de la Plata', 'Río de la Plata', ['River Plate', 'Rio de la Plata'], 'South America', 'sea'],
+  ['Persian Gulf', 'Persian Gulf', ['Arabian Gulf', 'The Gulf'], 'Asia', 'sea'], ['Gulf of Oman', 'Gulf of Oman', [], 'Asia', 'sea'], ['Gulf of Aden', 'Gulf of Aden', [], 'Africa', 'sea'],
+  ['Gulf of Thailand', 'Gulf of Thailand', ['Gulf of Siam'], 'Asia', 'sea'], ['Gulf of Tonkin', 'Gulf of Tonkin', [], 'Asia', 'sea'], ['Bay of Bengal', 'Bay of Bengal', [], 'Asia', 'sea'],
+  ['Gulf of Guinea', 'Gulf of Guinea', [], 'Africa', 'sea'], ['Bay of Biscay', 'Bay of Biscay', [], 'Europe', 'sea'], ['Gulf of Bothnia', 'Gulf of Bothnia', [], 'Europe', 'sea'],
+  ['Gulf of Finland', 'Gulf of Finland', [], 'Europe', 'sea'], ['Gulf of Carpentaria', 'Gulf of Carpentaria', [], 'Oceania', 'sea'], ['Great Australian Bight', 'Great Australian Bight', [], 'Oceania', 'sea'],
+  ['Strait of Gibraltar', 'Strait of Gibraltar', ['Gibraltar'], 'Europe', 'strait'], ['Bosporus', 'Bosporus', ['Bosphorus'], 'Europe', 'strait'],
+  ['Dardanelles', 'Dardanelles', [], 'Europe', 'strait'], ['English Channel', 'English Channel', ['La Manche'], 'Europe', 'strait'], ['Øresund', 'Øresund', ['Oresund', 'The Sound'], 'Europe', 'strait'],
+  ['Denmark Strait', 'Denmark Strait', [], 'Europe', 'strait'], ['Strait of Malacca', 'Strait of Malacca', ['Malacca Strait'], 'Asia', 'strait'],
+  ['Singapore Strait', 'Singapore Strait', ['Strait of Singapore'], 'Asia', 'strait'], ['Taiwan Strait', 'Taiwan Strait', ['Formosa Strait'], 'Asia', 'strait'],
+  ['Korea Strait', 'Korea Strait', ['Tsushima Strait'], 'Asia', 'strait'], ['Tsugaru Strait', 'Tsugaru Strait', [], 'Asia', 'strait'], ['La Pérouse Strait', 'La Pérouse Strait', ['La Perouse Strait', 'Soya Strait'], 'Asia', 'strait'],
+  ['Luzon Strait', 'Luzon Strait', [], 'Asia', 'strait'], ['Palk Strait', 'Palk Strait', [], 'Asia', 'strait'], ['Bab-el-Mandeb', 'Bab-el-Mandeb', ['Bab el Mandeb'], 'Africa', 'strait'],
+  ['Mozambique Channel', 'Mozambique Channel', [], 'Africa', 'strait'], ['Florida Strait', 'Florida Strait', ['Straits of Florida'], 'North America', 'strait'],
+  ['Yucatán Channel', 'Yucatán Channel', ['Yucatan Channel'], 'North America', 'strait'], ['Davis Strait', 'Davis Strait', [], 'North America', 'strait'],
+  ['Hudson Strait', 'Hudson Strait', [], 'North America', 'strait'], ['Strait of Magellan', 'Strait of Magellan', ['Magellan Strait'], 'South America', 'strait'],
+  ['Drake Passage', 'Drake Passage', [], 'South America', 'strait'], ['Bass Strait', 'Bass Strait', [], 'Oceania', 'strait'], ['Cook Strait', 'Cook Strait', [], 'Oceania', 'strait'],
+  ['Torres Strait', 'Torres Strait', [], 'Oceania', 'strait']
+];
+// Two famous straits that Natural Earth doesn't draw: shown as a point
+const STRAIT_POINTS = [['Strait of Hormuz', ['Hormuz'], 'Asia', [56.4, 26.55]], ['Bering Strait', [], 'North America', [-168.95, 65.8]]];
+const [neMarine50, neMarine10] = await Promise.all([getJSON('ne_50m_geography_marine_polys.geojson'), getJSON('ne_10m_geography_marine_polys.geojson')]);
+const seas = [];
+for (const [n, ne, alts, region, st] of SEAS) {
+  const src = st === 'strait' ? neMarine10 : neMarine50;
+  const parts = src.features.filter(f => neName(f.properties) === ne || f.properties.name === ne);
+  if (!parts.length) { console.warn('  missing sea', n); continue; }
+  const merged = { type: 'MultiPolygon', coordinates: parts.flatMap(f => f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates) };
+  const b = wpath.bounds(merged), c = wpath.centroid(merged);
+  seas.push({ c: slug('sea', n), n, a: alts, t: 'sea', st, r: region, cc: [], d: wpath(merged), b: [r1(b[0][0]), r1(b[0][1]), r1(b[1][0]), r1(b[1][1])], p: [r1(c[0]), r1(c[1])] });
+}
+for (const [n, alts, region, ll] of STRAIT_POINTS) { const f = pointFeature('sea', n, alts, ll, ['XX'], { st: 'strait', pt: 1 }); f.r = region; f.cc = []; seas.push(f); }
+
 const nature = [
   ...buildFeatures(LAKES, neLakes, 'lake'),
   ...buildFeatures(RIVERS, neRivers, 'river'),
-  ...buildFeatures(RANGES, neRegions, 'range', 'Range/mtn')
+  ...buildFeatures(RANGES, neRegions, 'range', 'Range/mtn'),
+  ...peaks, ...seas
 ];
 fs.writeFileSync('public/data/nature.json', JSON.stringify(nature));
-console.log('nature:', ['lake', 'river', 'range'].map(t => `${nature.filter(x => x.t === t).length} ${t}s`).join(', '));
+console.log('nature:', ['lake', 'river', 'range', 'peak', 'sea'].map(t => `${nature.filter(x => x.t === t).length} ${t}s`).join(', '));
+
+/* ---------------- Trivia: famous landmarks and former names ---------------- */
+// Landmarks: [name, country, Wikipedia article (if different), other names]
+const LANDMARKS = [
+  ['Machu Picchu', 'PE'], ['Taj Mahal', 'IN'], ['Great Wall of China', 'CN', null, ['Great Wall']], ['Petra', 'JO'], ['Colosseum', 'IT', null, ['Coliseum']],
+  ['Christ the Redeemer', 'BR', 'Christ the Redeemer (statue)'], ['Chichén Itzá', 'MX', 'Chichen Itza', ['Chichen Itza']], ['Eiffel Tower', 'FR'],
+  ['Statue of Liberty', 'US'], ['Big Ben', 'GB'], ['Sydney Opera House', 'AU'], ['Pyramids of Giza', 'EG', 'Giza pyramid complex', ['Great Pyramid of Giza']],
+  ['Angkor Wat', 'KH'], ['Stonehenge', 'GB'], ['Acropolis of Athens', 'GR', null, ['Acropolis', 'Parthenon']], ['Leaning Tower of Pisa', 'IT'],
+  ['Sagrada Família', 'ES', null, ['Sagrada Familia']], ['Alhambra', 'ES'], ['Neuschwanstein Castle', 'DE'], ['Brandenburg Gate', 'DE'],
+  ['Mount Rushmore', 'US'], ['Golden Gate Bridge', 'US'], ['Grand Canyon', 'US'], ['Burj Khalifa', 'AE'], ['Hagia Sophia', 'TR'],
+  ['Moai of Easter Island', 'CL', 'Moai', ['Moai', 'Easter Island']], ['Uluru', 'AU', null, ['Ayers Rock']], ['Moscow Kremlin', 'RU', null, ['Kremlin']],
+  ["Saint Basil's Cathedral", 'RU', null, ["St. Basil's Cathedral"]], ['Forbidden City', 'CN'], ['Terracotta Army', 'CN', null, ['Terracotta Warriors']],
+  ['Potala Palace', 'CN'], ['Fushimi Inari Shrine', 'JP', 'Fushimi Inari-taisha'], ['Himeji Castle', 'JP'], ['Kinkaku-ji', 'JP', null, ['Golden Pavilion']],
+  ['Tokyo Skytree', 'JP'], ['Borobudur', 'ID'], ['Bagan', 'MM'], ['Shwedagon Pagoda', 'MM'], ['Ha Long Bay', 'VN', null, ['Halong Bay']],
+  ['Petronas Towers', 'MY'], ['Marina Bay Sands', 'SG'], ['Golden Temple', 'IN', null, ['Harmandir Sahib']], ['Sigiriya', 'LK', null, ['Lion Rock']],
+  ['Gyeongbokgung Palace', 'KR', 'Gyeongbokgung'], ['Louvre', 'FR', null, ['Louvre Museum']], ['Mont-Saint-Michel', 'FR', null, ['Mont Saint-Michel']],
+  ['Palace of Versailles', 'FR', null, ['Versailles']], ['Tower Bridge', 'GB'], ['Edinburgh Castle', 'GB'], ['Cliffs of Moher', 'IE'],
+  ['Atomium', 'BE'], ['Manneken Pis', 'BE'], ['The Little Mermaid', 'DK', 'The Little Mermaid (statue)', ['Little Mermaid']], ['Charles Bridge', 'CZ'],
+  ['Schönbrunn Palace', 'AT', null, ['Schonbrunn Palace']], ['Trevi Fountain', 'IT'], ["St. Peter's Basilica", 'VA', null, ["Saint Peter's Basilica"]],
+  ['Sistine Chapel', 'VA'], ['Meteora', 'GR'], ['Belém Tower', 'PT', null, ['Belem Tower']], ['Plitvice Lakes', 'HR', 'Plitvice Lakes National Park'],
+  ['Lake Bled', 'SI', null, ['Bled']], ['Bran Castle', 'RO', null, ["Dracula's Castle"]], ['Wieliczka Salt Mine', 'PL'], ['Hallgrímskirkja', 'IS', null, ['Hallgrimskirkja']],
+  ['Blue Mosque', 'TR', 'Blue Mosque, Istanbul', ['Sultan Ahmed Mosque']], ['Cappadocia', 'TR'], ['Pamukkale', 'TR'], ['Persepolis', 'IR'],
+  ['Kaaba', 'SA'], ['Sheikh Zayed Grand Mosque', 'AE'], ['Abu Simbel', 'EG', 'Abu Simbel temples'], ['Valley of the Kings', 'EG'],
+  ['Rock-hewn churches of Lalibela', 'ET', 'Rock-hewn Churches, Lalibela', ['Lalibela']], ['Great Mosque of Djenné', 'ML', null, ['Great Mosque of Djenne']],
+  ['Hassan II Mosque', 'MA'], ['Robben Island', 'ZA'], ['CN Tower', 'CA'], ['Château Frontenac', 'CA', null, ['Chateau Frontenac']],
+  ['Hollywood Sign', 'US'], ['Space Needle', 'US'], ['White House', 'US'], ['Teotihuacan', 'MX'], ['Tikal', 'GT'], ['Panama Canal', 'PA'],
+  ['Galápagos Islands', 'EC', null, ['Galapagos Islands']], ['Salar de Uyuni', 'BO'], ['Perito Moreno Glacier', 'AR'], ['Torres del Paine', 'CL', 'Torres del Paine National Park'],
+  ['Angel Falls', 'VE'], ['Sugarloaf Mountain', 'BR'], ['Milford Sound', 'NZ'], ['Great Barrier Reef', 'AU'], ['Twelve Apostles', 'AU', 'The Twelve Apostles (Victoria)']
+];
+// Former names: [old name, current name, country, year renamed (if one clear year), city?]
+const FORMER = [
+  ['Burma', 'MM', 1989], ['Siam', 'TH', 1939], ['Ceylon', 'LK', 1972], ['Persia', 'IR', 1935], ['Zaire', 'CD', 1997], ['Belgian Congo', 'CD', 1960],
+  ['Dahomey', 'BJ', 1975], ['Upper Volta', 'BF', 1984], ['Gold Coast', 'GH', 1957], ['Rhodesia', 'ZW', 1980], ['Northern Rhodesia', 'ZM', 1964],
+  ['Nyasaland', 'MW', 1964], ['Bechuanaland', 'BW', 1966], ['Basutoland', 'LS', 1966], ['Swaziland', 'SZ', 2018], ['Abyssinia', 'ET'],
+  ['Kampuchea', 'KH', 1989], ['East Pakistan', 'BD', 1971], ['Formosa', 'TW'], ['Trucial States', 'AE', 1971], ['Transjordan', 'JO', 1949],
+  ['British Honduras', 'BZ', 1973], ['Dutch Guiana', 'SR'], ['British Guiana', 'GY', 1966], ['French Sudan', 'ML', 1960], ['Ubangi-Shari', 'CF'],
+  ['Spanish Guinea', 'GQ', 1968], ['Portuguese Guinea', 'GW'], ['South West Africa', 'NA', 1990], ['Malagasy Republic', 'MG', 1975],
+  ['New Hebrides', 'VU', 1980], ['Ellice Islands', 'TV'], ['Gilbert Islands', 'KI', 1979], ['Western Samoa', 'WS', 1997], ['Byelorussia', 'BY', 1991],
+  ['Moldavia', 'MD', 1991], ['Kirghizia', 'KG', 1991], ['Macedonia', 'MK', 2019], ['Muscat and Oman', 'OM', 1970], ['Tanganyika', 'TZ', 1964],
+  ['Dutch East Indies', 'ID'],
+  ['Constantinople', 'Istanbul', 'TR', 1930], ['Bombay', 'Mumbai', 'IN', 1995], ['Madras', 'Chennai', 'IN', 1996], ['Calcutta', 'Kolkata', 'IN', 2001],
+  ['Bangalore', 'Bengaluru', 'IN', 2014], ['Peking', 'Beijing', 'CN'], ['Canton', 'Guangzhou', 'CN'], ['Saigon', 'Ho Chi Minh City', 'VN', 1976],
+  ['Leningrad', 'Saint Petersburg', 'RU', 1991], ['Stalingrad', 'Volgograd', 'RU', 1961], ['Königsberg', 'Kaliningrad', 'RU', 1946],
+  ['New Amsterdam', 'New York City', 'US', 1664], ['Yerba Buena', 'San Francisco', 'US', 1847], ['Edo', 'Tokyo', 'JP', 1868],
+  ['Salisbury', 'Harare', 'ZW', 1982], ['Léopoldville', 'Kinshasa', 'CD', 1966], ['Batavia', 'Jakarta', 'ID'], ['Rangoon', 'Yangon', 'MM', 1989],
+  ['Christiania', 'Oslo', 'NO', 1925], ['Lourenço Marques', 'Maputo', 'MZ', 1976], ['Fort-Lamy', "N'Djamena", 'TD', 1973], ['Dacca', 'Dhaka', 'BD', 1982],
+  ['Bytown', 'Ottawa', 'CA', 1855], ["Pile o' Bones", 'Regina', 'CA', 1882], ['Danzig', 'Gdańsk', 'PL'], ['Pressburg', 'Bratislava', 'SK']
+];
+const CITY_ALTS = { 'Saint Petersburg': ['St. Petersburg', 'St Petersburg'], 'New York City': ['New York', 'NYC'], 'Ho Chi Minh City': ['Ho Chi Minh', 'HCMC'], 'Gdańsk': ['Gdansk'], "N'Djamena": ['Ndjamena'], 'Bengaluru': ['Bangalore'] };
+const countryByCode = Object.fromEntries(countries.map(c => [c.c, c]));
+const trivia = [];
+for (const [n, cc, wiki, alts] of LANDMARKS) {
+  const ct = countryByCode[cc]; if (!ct) { console.warn('  landmark country?', n, cc); continue; }
+  trivia.push({ c: slug('lm', n), n, t: 'landmark', cc, ans: ct.n, a: ct.a, alts: alts || [], r: ct.r, sr: ct.sr, wiki: wiki || n });
+}
+for (const row of FORMER) {
+  const city = typeof row[1] === 'string' && row[1].length > 2;
+  const [old, now, cc, year] = city ? row : [row[0], null, row[1], row[2]];
+  const ct = countryByCode[cc]; if (!ct) { console.warn('  former country?', old, cc); continue; }
+  trivia.push({ c: slug('was', old), n: old, t: city ? 'former-city' : 'former-country', cc, ans: city ? now : ct.n, a: city ? (CITY_ALTS[now] || []) : ct.a, r: ct.r, sr: ct.sr, y: year || null, k: ct.k });
+}
+fs.writeFileSync('public/data/trivia.json', JSON.stringify(trivia));
+console.log('trivia:', trivia.filter(x => x.t === 'landmark').length, 'landmarks,', trivia.filter(x => x.t !== 'landmark').length, 'former names');
 
 /* ---------------- Provinces and states of Canada, Australia, Germany and Mexico ----------------
    Outlines: Natural Earth 1:10m admin-1 (public domain), simplified with shared borders kept.

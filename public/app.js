@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611172148";
+const VERSION = "202611181427";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -17,6 +17,7 @@ const WORLD_REGIONS = ["All", "Africa", "Asia", "Europe", "North America", "Sout
 const US_REGIONS = ["All", "Northeast", "Midwest", "South", "West"];
 const ALL_MODES = ["practice", "quiz", "name-all", "browse"];
 const PQB = ["practice", "quiz", "browse"];
+const ONE_REGION = ["All"];
 const TOPICS = [
   { id: "flags", group: "World", name: "Country flags", unit: "flags", set: "countries", kind: "flag", regions: WORLD_REGIONS, terr: true,
     styles: ["choice", "type", "reverse"], ask: "Which country is this?", find: "Find the flag of", typeHolder: "Type the country",
@@ -31,18 +32,31 @@ const TOPICS = [
     styles: ["choice", "type"], ask: "Which country has this shape?", typeHolder: "Type the country", nameHint: "Name every country from its outline." },
   { id: "neighbors", group: "World", name: "Neighbors", unit: "countries", set: "countries", kind: "neighbors", regions: WORLD_REGIONS, terr: false,
     styles: ["choice", "type"], ask: "Which country borders it?", typeHolder: "Type any country that borders it", modes: PQB },
-  { id: "currencies", group: "World", name: "Currencies", unit: "currencies", set: "countries", kind: "fact", field: "cur", multi: true, regions: WORLD_REGIONS, terr: false,
-    styles: ["choice", "type"], ask: "Which currency is used here?", typeHolder: "Type the currency", modes: PQB, mapPick: false },
-  { id: "languages", group: "World", name: "Languages", unit: "countries", set: "countries", kind: "fact", field: "lang", multi: true, regions: WORLD_REGIONS, terr: false,
-    styles: ["choice", "type"], ask: "Which language is official here?", typeHolder: "Type an official language", modes: PQB, mapPick: false },
-  { id: "domains", group: "World", name: "Internet domains", unit: "domains", set: "countries", kind: "fact", field: "tld", regions: WORLD_REGIONS, terr: true,
-    styles: ["choice", "type"], ask: "What's its internet domain?", typeHolder: "Type the domain, like .fr", modes: PQB },
-  { id: "phone", group: "World", name: "Phone codes", unit: "codes", set: "countries", kind: "fact", field: "ph", regions: WORLD_REGIONS, terr: false,
-    styles: ["choice", "type"], ask: "What's its phone code?", typeHolder: "Type the code, like +33", modes: PQB, mapPick: false },
   { id: "area", group: "World", name: "Bigger or smaller", set: "countries", kind: "compare", field: "area", regions: WORLD_REGIONS, terr: false,
     styles: ["pair"], ask: "Which country is bigger?", verb: "is bigger", modes: PQB },
   { id: "population", group: "World", name: "More or fewer people", set: "countries", kind: "compare", field: "pop", regions: WORLD_REGIONS, terr: false,
     styles: ["pair"], ask: "Which country has more people?", verb: "has more people", modes: PQB },
+  { id: "landlocked", group: "World", name: "Landlocked countries", unit: "landlocked countries", set: "countries", kind: "odd", field: "ll", regions: WORLD_REGIONS, terr: false,
+    styles: ["choice"], ask: "Which of these countries is landlocked?", nameHint: "Type every landlocked country you can think of." },
+
+  { id: "currencies", group: "Trivia", name: "Currencies", unit: "currencies", set: "countries", kind: "fact", field: "cur", multi: true, regions: WORLD_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "Which currency is used here?", typeHolder: "Type the currency", modes: PQB, mapPick: false },
+  { id: "languages", group: "Trivia", name: "Languages", unit: "countries", set: "countries", kind: "fact", field: "lang", multi: true, regions: WORLD_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "Which language is official here?", typeHolder: "Type an official language", modes: PQB, mapPick: false },
+  { id: "domains", group: "Trivia", name: "Internet domains", unit: "domains", set: "countries", kind: "fact", field: "tld", regions: WORLD_REGIONS, terr: true,
+    styles: ["choice", "type"], ask: "What's its internet domain?", typeHolder: "Type the domain, like .fr", modes: PQB },
+  { id: "phone", group: "Trivia", name: "Phone codes", unit: "codes", set: "countries", kind: "fact", field: "ph", regions: WORLD_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "What's its phone code?", typeHolder: "Type the code, like +33", modes: PQB, mapPick: false },
+  { id: "demonyms", group: "Trivia", name: "Demonyms", unit: "demonyms", set: "countries", kind: "fact", field: "dem", altField: "dems", regions: WORLD_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "What do you call someone from here?", typeHolder: "Type the word, like French", modes: PQB },
+  { id: "continents", group: "Trivia", name: "Which continent?", unit: "countries", set: "countries", kind: "fact", field: "r", altField: "conta", regions: ONE_REGION, terr: false, repeatAnswers: true,
+    styles: ["choice", "type"], ask: "Which continent is it in?", typeHolder: "Type the continent", modes: PQB, mapPick: false },
+  { id: "driving", group: "Trivia", name: "Driving side", unit: "countries", set: "countries", kind: "fact", field: "drive", regions: WORLD_REGIONS, terr: true, repeatAnswers: true,
+    styles: ["choice"], ask: "Which side of the road do they drive on?", modes: PQB, mapPick: false },
+  { id: "landmarks", group: "Trivia", name: "Famous landmarks", unit: "landmarks", set: "trivia", kind: "text", field: "n", types: ["landmark"], photos: true, regions: WORLD_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "Which country is it in?", typeHolder: "Type the country", modes: PQB },
+  { id: "former", group: "Trivia", name: "Former names", unit: "former names", set: "trivia", kind: "text", field: "n", types: ["former-country", "former-city"], regions: WORLD_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "What's it called now?", typeHolder: "Type today's name", modes: PQB },
 
   { id: "lakes", group: "Nature", name: "Lakes", unit: "lakes", set: "nature", kind: "feature", type: "lake", regions: WORLD_REGIONS, terr: false,
     styles: ["choice", "type"], ask: "Which lake is highlighted?", typeHolder: "Type the lake", modes: PQB },
@@ -50,6 +64,10 @@ const TOPICS = [
     styles: ["choice", "type"], ask: "Which river is highlighted?", typeHolder: "Type the river", modes: PQB },
   { id: "ranges", group: "Nature", name: "Mountain ranges", unit: "ranges", set: "nature", kind: "feature", type: "range", regions: WORLD_REGIONS, terr: false,
     styles: ["choice", "type"], ask: "Which mountain range is highlighted?", typeHolder: "Type the mountain range", modes: PQB },
+  { id: "peaks", group: "Nature", name: "Mountain peaks", unit: "peaks", set: "nature", kind: "feature", type: "peak", regions: WORLD_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "Which mountain is marked?", typeHolder: "Type the mountain", modes: PQB },
+  { id: "seas", group: "Nature", name: "Seas and straits", unit: "seas and straits", set: "nature", kind: "feature", type: "sea", regions: WORLD_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "Which sea or strait is highlighted?", typeHolder: "Type the sea, gulf or strait", modes: PQB },
 
   { id: "state-flags", group: "United States", name: "State flags", unit: "state flags", set: "states", kind: "flag", regions: US_REGIONS, terr: false,
     styles: ["choice", "type", "reverse"], ask: "Which state is this?", find: "Find the flag of", typeHolder: "Type the state", nameHint: "Type every state you can think of." },
@@ -60,7 +78,9 @@ const TOPICS = [
   { id: "state-shapes", group: "United States", name: "State shapes", unit: "shapes", set: "states", kind: "shape", regions: US_REGIONS, terr: false,
     styles: ["choice", "type"], ask: "Which state has this shape?", typeHolder: "Type the state", nameHint: "Name every state from its outline." },
   { id: "state-abbr", group: "United States", name: "State abbreviations", unit: "abbreviations", set: "states", kind: "text", field: "code", regions: US_REGIONS, terr: false,
-    styles: ["choice", "type"], ask: "Which state is this?", typeHolder: "Type the state", nameHint: "Type the state for every abbreviation." }
+    styles: ["choice", "type"], ask: "Which state is this?", typeHolder: "Type the state", nameHint: "Type the state for every abbreviation." },
+  { id: "state-nicknames", group: "United States", name: "State nicknames", unit: "nicknames", set: "states", kind: "text", field: "nick", regions: US_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "Which state is this?", typeHolder: "Type the state", nameHint: "Type the state for every nickname." }
 ];
 // Provinces and states of other countries: same engine, one set per country
 const ONE = ["All"];
@@ -93,6 +113,7 @@ const SETS = {
   countries: { data: "data/countries.json", images: "data/flags.json", map: "data/world-map.json", whole: "the whole world" },
   states: { data: "data/states.json", images: "data/state-flags.json", map: "data/us-map.json", whole: "all 50 states" },
   nature: { data: "data/nature.json", images: null, map: "data/world-map.json", whole: "the whole world", needs: ["countries"] },
+  trivia: { data: "data/trivia.json", images: null, map: "data/world-map.json", whole: "the whole world", needs: ["countries"] },
   ca: { data: "data/ca.json", images: "data/ca-flags.json", map: "data/ca-map.json", whole: "all of Canada" },
   au: { data: "data/au.json", images: "data/au-flags.json", map: "data/au-map.json", whole: "all of Australia" },
   de: { data: "data/de.json", images: "data/de-flags.json", map: "data/de-map.json", whole: "all of Germany" },
@@ -206,6 +227,8 @@ function buildTopic(def) {
   if (def.kind === "shape") rows = rows.filter(r => { const i = shapeInfo(def, r.c); return i && Math.max(i.b[2] - i.b[0], i.b[3] - i.b[1]) >= 1.5; });
   if (def.kind === "locate") rows = rows.filter(r => { const m = mapOf(def.set); return m && m.data && m.data.info[r.c]; });
   if (def.kind === "feature") rows = rows.filter(r => r.t === def.type);
+  if (def.types) rows = rows.filter(r => def.types.includes(r.t));
+  if (def.kind === "odd") rows = rows.filter(r => r[def.field]);
   const items = rows.map(r => {
     const base = { id: r.c, label: r.n, r: r.r, sr: where(r), k: r.k, cap: r.cap, row: r };
     switch (def.kind) {
@@ -216,19 +239,32 @@ function buildTopic(def) {
         }
         if (def.multi) { const vals = r[def.field]; return { ...base, ans: vals.join(" / "), alts: vals, vals, fact: `${r.n} · ${where(r)}` }; }
         const v = r[def.field];
-        const alts = def.field === "tld" ? [v.replace(/^\./, "")] : def.field === "ph" ? [v.replace(/^\+/, "")] : [];
-        return { ...base, ans: v, alts, fact: `${r.n} · ${where(r)}` };
+        const alts = def.field === "tld" ? [v.replace(/^\./, "")] : def.field === "ph" ? [v.replace(/^\+/, "")] : def.altField ? (r[def.altField] || []) : [];
+        const fact = def.field === "dem" ? `Someone from ${r.n} is ${v}${alts.length ? ` (also ${alts.join(", ")})` : ""}`
+          : def.field === "drive" ? `${r.n} drives on the ${v.toLowerCase()} · ${where(r)}`
+          : def.field === "r" ? `${r.n} is in ${v}${alts.length ? ` (and partly in ${alts.join(", ")})` : ""} · ${r.sr}` : `${r.n} · ${where(r)}`;
+        return { ...base, ans: v, alts, fact };
       }
-      case "text":
-        return { ...base, q: def.field === "code" ? r.c : r.cap, ans: r.n, alts: r.a || [],
-          fact: def.field === "code" ? `${r.c} is ${r.n} · ${where(r)}` : `${r.cap} is the capital of ${r.n} · ${where(r)}` };
+      case "text": {
+        if (def.set === "trivia") {
+          const city = r.t === "former-city", lm = r.t === "landmark";
+          const fact = lm ? `${r.n} is in ${r.ans} · ${where(r)}` : `${r.n} is now ${r.ans}${r.y ? `, renamed in ${r.y}` : ""} · ${city ? countryName(r.cc) : where(r)}`;
+          return { ...base, cap: null, q: r.n, ans: r.ans, alts: r.a || [], mid: r.cc, fact,
+            ask: lm ? null : city ? "What's this city called now?" : "What's this country called now?" };
+        }
+        const q = def.field === "code" ? r.c : r[def.field];
+        const fact = def.field === "code" ? `${r.c} is ${r.n}` : def.field === "nick" ? `${r.n} is the ${q.replace(/^The /, "")}` : `${r.cap} is the capital of ${r.n}`;
+        return { ...base, q, ans: r.n, alts: r.a || [], fact: `${fact} · ${where(r)}` };
+      }
       case "neighbors": return { ...base, ans: r.n, alts: r.a || [], nb: r.nb, fact: `${r.n} · ${where(r)}` };
       case "compare": return { ...base, ans: r.n, alts: r.a || [], val: r[def.field], fact: where(r) };
       case "feature": {
         const names = r.cc.map(countryName), shown = names.slice(0, 5).concat(names.length > 5 ? [`${names.length - 5} more`] : []);
-        const verb = r.t === "river" ? "Flows through" : r.t === "lake" ? (names.length > 1 ? "Shared by" : "In") : "Runs through";
-        return { ...base, ans: r.n, alts: r.a || [], sr: r.r, feat: r, fact: names.length ? `${verb} ${listJoin(shown)}` : r.r };
+        const verb = r.t === "river" ? "Flows through" : r.t === "lake" ? (names.length > 1 ? "Shared by" : "In") : r.t === "peak" ? (names.length > 1 ? "On the border of" : "In") : "Runs through";
+        const fact = r.t === "peak" ? `${fmtElev(r.el)} · ${verb} ${listJoin(shown)}` : r.t === "sea" ? `${r.st === "strait" ? "Strait or channel" : "Sea, gulf or bay"} · ${r.r}` : names.length ? `${verb} ${listJoin(shown)}` : r.r;
+        return { ...base, ans: r.n, alts: r.a || [], sr: r.r, feat: r, fact };
       }
+      case "odd": return { ...base, ans: r.n, alts: r.a || [], fact: `${r.n} has no coastline · ${where(r)}` };
       default: return { ...base, ans: r.n, alts: r.a || [], fact: [r.cap && `Capital: ${r.cap}`, where(r)].filter(Boolean).join(" · ") };
     }
   });
@@ -242,7 +278,9 @@ function buildTopic(def) {
   // Remember how many items this topic has, for the stats page
   const n = items.filter(it => pref.terr || it.k !== "territory").length;
   if (prog.n !== n) { prog.n = n; if (Object.keys(prog.p).length) try { localStorage.setItem(`geography-gym-${def.id}-v1`, JSON.stringify(prog)); } catch (e) {} }
-  return { def, items, byId, rowById, alias, img: set.img, prog, pref };
+  // Odd one out (landlocked): the wrong choices come from countries that aren't
+  const others = def.kind === "odd" ? set.rows.filter(r => !r[def.field] && r.k === "country").map(r => ({ id: r.c, label: r.n, ans: r.n, alts: r.a || [], r: r.r, sr: where(r), k: r.k, row: r })) : [];
+  return { def, items, byId, rowById, alias, img: set.img, prog, pref, others };
 }
 function saveProgress() { try { localStorage.setItem(`geography-gym-${T.def.id}-v1`, JSON.stringify(T.prog)); } catch (e) {} }
 function rec(id) { return T.prog.p[id] || (T.prog.p[id] = { b: 0, s: 0, r: 0 }); }
@@ -256,6 +294,7 @@ function grade(id, ok) {
 const kindOk = it => T.pref.terr || it.k !== "territory";
 const pool = () => T.items.filter(it => kindOk(it) && (T.pref.region === "All" || it.r === T.pref.region));
 const poolKey = () => T.pref.region + (T.pref.terr ? "+t" : "");
+const fmtElev = m => `${m.toLocaleString("en-US")} m (${Math.round(m * 3.28084).toLocaleString("en-US")} ft)`;
 const nameOf = id => (T.rowById[id] && T.rowById[id].n) || (T.byId[id] && T.byId[id].label) || countryName(id);
 
 function judgeTyped(input, q) {
@@ -558,6 +597,12 @@ async function mountMap(container, { pick = null, tips = true, dots = false } = 
       const small = b && (b[2] - b[0] < v[2] * 0.04 && b[3] - b[1] < v[3] * 0.04);
       ring.style.display = small ? "" : "none";
       if (small) { ring.setAttribute("cx", info.p[0]); ring.setAttribute("cy", info.p[1]); ring.setAttribute("r", v[2] * 0.035); svg.appendChild(ring); }
+      // Peaks and point features: a marker that keeps its size on screen
+      const f = ringFeats[i];
+      if (f && !f.d) {
+        const [x, y] = f.p, k = v[2] * 0.012;
+        m.overlays[i].setAttribute("d", f.t === "peak" ? `M${x} ${y - k}L${x + k * 0.95} ${y + k * 0.7}L${x - k * 0.95} ${y + k * 0.7}Z` : `M${x - k * 0.7} ${y}a${k * 0.7} ${k * 0.7} 0 1 0 ${k * 1.4} 0a${k * 0.7} ${k * 0.7} 0 1 0 ${-k * 1.4} 0`);
+      }
     });
   };
   const animateTo = (to, dur = 450) => {
@@ -589,7 +634,7 @@ async function mountMap(container, { pick = null, tips = true, dots = false } = 
     ringIds = [hit[0] || null, miss[0] || null];
     setVB(vb);
   };
-  ctl.overlay = (feat, i = 0) => { ringFeats[i] = feat; setVB(vb); const o = m.overlays[i]; o.setAttribute("d", feat.d); o.setAttribute("class", `feat ${feat.t}${i ? " miss" : ""}`); svg.insertBefore(o, svg.querySelector(".dots")); };
+  ctl.overlay = (feat, i = 0) => { ringFeats[i] = feat; const o = m.overlays[i]; if (feat.d) o.setAttribute("d", feat.d); setVB(vb); o.setAttribute("class", `feat ${feat.t}${i ? " miss" : ""}`); svg.insertBefore(o, svg.querySelector(".dots")); };
   ctl.focusBox = (b, padK, minFrac, fly = true) => ctl.focusFrame(frameBoxes(data, [b], aspect(), padK, minFrac), fly);
   ctl.focus = (ids, fly = true) => ctl.focusFrame(frameFor(data, ids, aspect()), fly);
   ctl.focusFrame = (f, fly = true) => {
@@ -664,7 +709,7 @@ function optLabelFn(target) {
   }
   return o => o.ans;
 }
-function distractors(target, n, label, exclude = new Set()) {
+function distractors(target, n, label, exclude = new Set(), src = T.items) {
   const ex = new Set([target.id, ...exclude]); if (T.def.id === "flags" && TWINS[target.id]) ex.add(TWINS[target.id]);
   const used = new Set([target.ans, ...target.alts].map(norm));
   if (T.def.multi) target.vals.forEach(v => used.add(norm(v)));
@@ -674,15 +719,16 @@ function distractors(target, n, label, exclude = new Set()) {
     for (const x of shuffle(arr)) {
       if (out.length >= n || k >= cap) break;
       if (ex.has(x.id) || !kindOk(x)) continue;
+      if (target.row && x.row && (x.row.t !== target.row.t || x.row.st !== target.row.st)) continue; // same kind: city vs country, sea vs strait
       const l = label(x); if (!l || used.has(norm(l))) continue;
       out.push(x); k++; ex.add(x.id); used.add(norm(l));
       if (T.def.id === "flags" && TWINS[x.id]) ex.add(TWINS[x.id]);
     }
   };
   if (T.def.groups) add((groupsOf[target.id] || []).flatMap(g => g.codes).map(k => T.byId[k]).filter(Boolean), 2);
-  add(T.items.filter(x => x.sr === target.sr), 2);
-  add(T.items.filter(x => x.r === target.r), 3);
-  add(T.items, 3);
+  add(src.filter(x => x.sr === target.sr), 2);
+  add(src.filter(x => x.r === target.r), 3);
+  add(src, 3);
   return out;
 }
 function makeQuestion(it, style) {
@@ -694,7 +740,8 @@ function makeQuestion(it, style) {
       const right = pick(it.nb.filter(id => T.rowById[id]));
       const rightItem = T.byId[right] || { id: right, ans: nameOf(right), alts: [], r: it.r, sr: it.sr };
       opts = [rightItem, ...distractors(it, 3, o => o.ans, new Set(it.nb))];
-    } else opts = [it, ...distractors(it, 3, label)];
+    } else if (def.kind === "odd") opts = [it, ...distractors(it, 3, label, new Set(), T.others)];
+    else opts = [it, ...distractors(it, 3, label)];
     q.options = shuffle(opts);
     q.labels = Object.fromEntries(q.options.map(o => [o.id, label(o)]));
   }
@@ -725,14 +772,20 @@ const WIKI_TITLE = {
   "Mexico City|Mexico City": "Mexico City", "Bremen|Bremen": "Bremen", "Hamburg|Hamburg": "Hamburg", "Berlin|Berlin": "Berlin"
 };
 const COUNTRY_OF_SET = { states: "United States", ca: "Canada", au: "Australia", de: "Germany", mx: "Mexico" };
-const hasPhoto = def => def.field === "cap" && (def.kind === "fact" || def.kind === "text");
+const hasPhoto = def => def.photos || (def.field === "cap" && (def.kind === "fact" || def.kind === "text"));
 function savePhotos() { try { localStorage.setItem(PHOTO_KEY, JSON.stringify(photoCache)); } catch (e) {} }
 async function capitalPhoto(it, def) {
+  if (def.set === "trivia") return wikiPhoto("lm|" + it.row.wiki, [it.row.wiki], null);
   const cap = it.cap, place = it.row.n, key = cap + "|" + place;
   if (key in photoCache) return photoCache[key];
   const country = COUNTRY_OF_SET[def.set];
   const names = [place, ...(it.row.a || []), country].filter(Boolean).map(norm);
   const tries = [...new Set([WIKI_TITLE[key], cap, `${cap}, ${place}`, country && `${cap}, ${country}`].filter(Boolean))];
+  return wikiPhoto(key, tries, names);
+}
+// Lead photo of the first Wikipedia article in tries that is a real article (and, with names, mentions one of them)
+async function wikiPhoto(key, tries, names) {
+  if (key in photoCache) return photoCache[key];
   let failed = false;
   for (const t of tries) {
     try {
@@ -742,7 +795,7 @@ async function capitalPhoto(it, def) {
       if (j.type !== "standard" || !j.thumbnail) continue;
       // Make sure it's the right city: the article should mention the country or state
       const text = " " + norm(`${j.description || ""} ${(j.extract || "").slice(0, 500)}`) + " ";
-      if (!names.some(n => n && text.includes(" " + n + " "))) continue;
+      if (names && !names.some(n => n && text.includes(" " + n + " "))) continue;
       const o = j.originalimage, src = o && o.width <= 900 ? o.source : j.thumbnail.source.replace(/\/\d+px-/, "/640px-");
       return (photoCache[key] = { src, page: j.content_urls.desktop.page }, savePhotos(), photoCache[key]);
     } catch (e) { failed = true; }
@@ -768,7 +821,8 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
     if (def.kind === "flag") h += `<div class="q-head"><div class="qflag">${img(it.id, "Mystery flag")}</div><p class="prompt">${esc(def.ask)}</p></div>`;
     else if (def.kind === "feature") h += `<div class="q-head"><p class="prompt">${esc(def.ask)}</p></div><figure class="map main" data-map>${MAP_CONTROLS}<figcaption class="map-key"><span>Scroll or use + and − to zoom</span></figcaption></figure>`;
     else if (def.kind === "shape") h += `<div class="q-head"><div class="qflag qshape">${shapeSVG(it.id)}</div><p class="prompt">${esc(def.ask)}</p></div>`;
-    else if (def.kind === "text") h += `<div class="q-head">${textTile(it.q)}<p class="prompt">${esc(def.ask)}</p></div>`;
+    else if (def.kind === "text") h += `<div class="q-head">${textTile(it.q)}<p class="prompt">${esc(it.ask || def.ask)}</p></div>`;
+    else if (def.kind === "odd") h += `<div class="q-head"><div class="qname odd-q">${esc(def.ask)}</div></div>`;
     else h += `<div class="q-head"><div class="qflag small">${img(it.id, "Flag of " + it.label)}</div><div class="qname">${esc(it.label)}</div><p class="prompt">${esc(def.ask)}</p></div>`;
     if (q.style === "choice") {
       h += `<div class="answers">${q.options.map(o => `<button type="button" class="answer" data-id="${o.id}">${esc(q.labels[o.id])}</button>`).join("")}</div>`;
@@ -809,7 +863,8 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
       return;
     }
     const p = picked && !(ok && picked === it.id) ? picked : null;
-    const pLabel = p && ((q.labels && q.labels[p]) || nameOf(p));
+    const pLabel = p && ((q.labels && q.labels[p]) || (def.set === "trivia" && T.byId[p] ? T.byId[p].ans : nameOf(p)));
+    const mid = x => (T.byId[x] && T.byId[x].mid) || x; // trivia items show their country on the map
     let line, sub = esc(it.fact) + (it.k === "territory" ? " · Territory" : ""), marks, key;
     if (q.compare) {
       const lose = q.a.id === it.id ? q.b : q.a;
@@ -835,10 +890,14 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
     } else {
       line = ok ? `Correct, it's ${esc(it.ans)}.` : `It's ${esc(it.ans)}.${p ? ` You picked ${esc(pLabel)}.` : ""}`;
       if (!ok && p && def.kind === "fact" && def.field === "cap" && T.byId[p]) sub += ` · ${esc(T.byId[p].ans)} is the capital of ${esc(T.byId[p].label)}`;
-      if (!ok && p && def.kind === "text" && T.byId[p]) sub += ` · ${def.field === "code" ? `${esc(T.byId[p].q)} is ${esc(T.byId[p].label)}` : `${esc(T.byId[p].label)}'s capital is ${esc(T.byId[p].q)}`}`;
-      const showPick = p && !ok && def.mapPick !== false && T.rowById[p];
-      marks = { hit: [it.id], miss: showPick ? [p] : [] };
-      key = [[it.id, "hit", ""]].concat(showPick ? [[p, "miss", "your pick"]] : []);
+      if (!ok && p && def.kind === "text" && T.byId[p]) {
+        const o = T.byId[p];
+        sub += ` · ${def.set === "trivia" ? (o.row.t === "landmark" ? `${esc(o.q)} is in ${esc(o.ans)}` : `${esc(o.q)} is now ${esc(o.ans)}`)
+          : def.field === "cap" ? `${esc(o.label)}'s capital is ${esc(o.q)}` : `${esc(o.q)} is ${esc(o.label)}`}`;
+      }
+      const showPick = p && !ok && def.mapPick !== false && T.rowById[p] && mid(p) !== mid(it.id);
+      marks = { hit: [mid(it.id)], miss: showPick ? [mid(p)] : [] };
+      key = [[mid(it.id), "hit", ""]].concat(showPick ? [[mid(p), "miss", "your pick"]] : []);
     }
     if (note && def.kind !== "neighbors") sub += ` · ${esc(note)}`;
     let tip = "";
@@ -867,13 +926,13 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
           else c.focusBox(it.feat.b, 2.2, 0.1);
           return;
         }
-        c.mark(marks); c.focus(marks.miss.length ? [it.id, ...marks.miss] : [it.id]);
+        c.mark(marks); c.focus(marks.hit.concat(marks.miss));
       };
       if (mapCtl) apply(mapCtl); else setTimeout(() => apply(mapCtl), 300);
     } else {
       const mapFig = `<figure class="map" data-map>${MAP_CONTROLS}<figcaption class="map-key">${keyHTML}</figcaption></figure>`;
       const photo = hasPhoto(def);
-      fbEl.innerHTML = resultRow + (photo ? `<div class="media">${mapFig}<figure class="cap-photo loading"><img alt="${esc(it.cap)}"><figcaption><b>${esc(it.cap)}</b><a target="_blank" rel="noopener">Wikipedia</a></figcaption></figure></div>` : mapFig) + tip;
+      fbEl.innerHTML = resultRow + (photo ? `<div class="media">${mapFig}<figure class="cap-photo loading"><img alt="${esc(it.cap || it.label)}"><figcaption><b>${esc(it.cap || it.label)}</b><a target="_blank" rel="noopener">Wikipedia</a></figcaption></figure></div>` : mapFig) + tip;
       if (photo) {
         const fig = fbEl.querySelector(".cap-photo"), im = fig.querySelector("img");
         const drop = () => { fig.remove(); };
@@ -1007,6 +1066,7 @@ const quiz = (() => {
     for (const it of shuffle(P)) {
       let k = it.id;
       if (def.kind === "flag" && TWINS[it.id]) k = [it.id, TWINS[it.id]].sort().join("+");
+      else if (def.repeatAnswers) k = it.id;
       else if (def.kind === "fact" || def.kind === "text") k = def.multi ? it.vals.map(norm).sort().join("+") : norm(it.ans);
       if (seen.has(k)) continue;
       seen.add(k); out.push(it);
@@ -1260,7 +1320,8 @@ const loadingCard = txt => `<div class="setup"><p>${esc(txt)}</p></div>`;
 
 /* Daily: the same 10 questions for everyone, from 10 different topics */
 const DAILY_POOL = ["flags", "capitals", "capitals-rev", "map", "shapes", "neighbors", "currencies", "languages", "area", "population",
-  "lakes", "rivers", "ranges", "state-flags", "state-capitals", "state-map", "ca-capitals", "au-capitals", "de-flags", "mx-map"];
+  "lakes", "rivers", "ranges", "state-flags", "state-capitals", "state-map", "ca-capitals", "au-capitals", "de-flags", "mx-map",
+  "landlocked", "demonyms", "landmarks", "former", "peaks", "seas", "state-nicknames"];
 const DKEY = "geography-gym-daily";
 const dailyLog = () => { try { return JSON.parse(localStorage.getItem(DKEY)) || {}; } catch (e) { return {}; } };
 function dailyStreak(log = dailyLog()) {
