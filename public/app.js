@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611181855";
+const VERSION = "202611181858";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -1044,8 +1044,20 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
 /* ---------- PRACTICE ---------- */
 const practice = (() => {
   let current = null, ctl = null, recent = [], streak = 0, done = false;
+  // Map topics (owner's request): every place in the region once per round, no repeats; the ones you missed lead the next round
+  let round = null;
   const host = () => $("#view-practice");
+  const isRound = () => T.def.kind === "locate";
+  function chooseRound() {
+    const P = pool(), key = poolKey();
+    if (!round || round.key !== key) round = { key, seen: new Set(), missed: [], next: [] };
+    let left = P.filter(it => !round.seen.has(it.id));
+    if (!left.length) { round.seen = new Set(); round.next = shuffle(round.missed.slice()); round.missed = []; left = P.slice(); }
+    while (round.next.length) { const id = round.next.shift(); const it = left.find(x => x.id === id); if (it) return it; }
+    return pick(left);
+  }
   function choose() {
+    if (isRound()) return chooseRound();
     const P = pool();
     const avoid = new Set(recent.slice(-Math.min(4, P.length - 1)));
     const ok = P.filter(it => !avoid.has(it.id));
@@ -1062,10 +1074,12 @@ const practice = (() => {
   function ask(q) {
     current = q; done = false;
     const isCompare = !!q.compare;
+    const roundText = isRound() && round ? `${round.seen.size} of ${pool().length} this round` : "";
     ctl = renderQuestion(host(), q, {
-      below: streak ? `Streak ${streak}` : "",
+      below: [roundText, streak ? `Streak ${streak}` : ""].filter(Boolean).join(" · "),
       onAnswer(ok) {
         done = true; streak = ok ? streak + 1 : 0;
+        if (isRound() && round && !ok) round.missed.push(q.it.id);
         if (isCompare) { if (streak > (T.prog.best.streak || 0)) { T.prog.best.streak = streak; saveProgress(); } updateMeter(); }
         else grade(q.it.id, ok);
       },
@@ -1078,10 +1092,11 @@ const practice = (() => {
       return ask(makeCompare(a, compareOpponent(a, P)));
     }
     const it = choose(); recent.push(it.id); if (recent.length > 8) recent.shift();
+    if (isRound()) round.seen.add(it.id);
     ask(makeQuestion(it, T.pref.style));
   }
   return {
-    reset() { recent = []; current = null; streak = 0; },
+    reset() { recent = []; current = null; streak = 0; round = null; },
     restyle() { if (current && !done && !current.compare) ask(makeQuestion(current.it, T.pref.style)); else current = null; },
     show() { if (!current) next(); },
     key(e) { ctl && ctl.key(e); }
