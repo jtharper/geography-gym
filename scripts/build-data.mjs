@@ -454,7 +454,7 @@ const LANDMARKS = [
   ["Saint Basil's Cathedral", 'RU', null, ["St. Basil's Cathedral"]], ['Forbidden City', 'CN'], ['Terracotta Army', 'CN', null, ['Terracotta Warriors']],
   ['Potala Palace', 'CN'], ['Fushimi Inari Shrine', 'JP', 'Fushimi Inari-taisha'], ['Himeji Castle', 'JP'], ['Kinkaku-ji', 'JP', null, ['Golden Pavilion']],
   ['Tokyo Skytree', 'JP'], ['Borobudur', 'ID'], ['Bagan', 'MM'], ['Shwedagon Pagoda', 'MM'], ['Ha Long Bay', 'VN', null, ['Halong Bay']],
-  ['Petronas Towers', 'MY'], ['Marina Bay Sands', 'SG'], ['Golden Temple', 'IN', null, ['Harmandir Sahib']], ['Sigiriya', 'LK', null, ['Lion Rock']],
+  ['Petronas Towers', 'MY', null, ['Petronas Twin Towers'], 'The Petronas Twin Towers in Kuala Lumpur (Malaysia).JPG'], ['Marina Bay Sands', 'SG'], ['Golden Temple', 'IN', null, ['Harmandir Sahib']], ['Sigiriya', 'LK', null, ['Lion Rock']],
   ['Gyeongbokgung Palace', 'KR', 'Gyeongbokgung'], ['Louvre', 'FR', null, ['Louvre Museum']], ['Mont-Saint-Michel', 'FR', null, ['Mont Saint-Michel']],
   ['Palace of Versailles', 'FR', null, ['Versailles']], ['Tower Bridge', 'GB'], ['Edinburgh Castle', 'GB'], ['Cliffs of Moher', 'IE'],
   ['Atomium', 'BE'], ['Manneken Pis', 'BE'], ['The Little Mermaid', 'DK', 'The Little Mermaid (statue)', ['Little Mermaid']], ['Charles Bridge', 'CZ'],
@@ -463,11 +463,27 @@ const LANDMARKS = [
   ['Lake Bled', 'SI', null, ['Bled']], ['Bran Castle', 'RO', null, ["Dracula's Castle"]], ['Wieliczka Salt Mine', 'PL'], ['Hallgrímskirkja', 'IS', null, ['Hallgrimskirkja']],
   ['Blue Mosque', 'TR', 'Blue Mosque, Istanbul', ['Sultan Ahmed Mosque']], ['Cappadocia', 'TR'], ['Pamukkale', 'TR'], ['Persepolis', 'IR'],
   ['Kaaba', 'SA'], ['Sheikh Zayed Grand Mosque', 'AE'], ['Abu Simbel', 'EG', 'Abu Simbel temples'], ['Valley of the Kings', 'EG'],
-  ['Rock-hewn churches of Lalibela', 'ET', 'Rock-hewn Churches, Lalibela', ['Lalibela']], ['Great Mosque of Djenné', 'ML', null, ['Great Mosque of Djenne']],
-  ['Hassan II Mosque', 'MA'], ['Robben Island', 'ZA'], ['CN Tower', 'CA'], ['Château Frontenac', 'CA', null, ['Chateau Frontenac']],
+  ['Rock-hewn churches of Lalibela', 'ET', 'Rock-hewn Churches, Lalibela', ['Lalibela', 'Church of Saint George'], 'Ethiopia - sunset at Church of Saint George, Lalibela 01.jpg'], ['Great Mosque of Djenné', 'ML', null, ['Great Mosque of Djenne']],
+  ['Hassan II Mosque', 'MA'], ['Robben Island', 'ZA'], ['CN Tower', 'CA', null, [], 'Toronto - ON - CN Tower (Bremner Blvd).jpg'], ['Château Frontenac', 'CA', null, ['Chateau Frontenac']],
   ['Hollywood Sign', 'US'], ['Space Needle', 'US'], ['White House', 'US'], ['Teotihuacan', 'MX'], ['Tikal', 'GT'], ['Panama Canal', 'PA'],
   ['Galápagos Islands', 'EC', null, ['Galapagos Islands']], ['Salar de Uyuni', 'BO'], ['Perito Moreno Glacier', 'AR'], ['Torres del Paine', 'CL', 'Torres del Paine National Park'],
-  ['Angel Falls', 'VE'], ['Sugarloaf Mountain', 'BR'], ['Milford Sound', 'NZ'], ['Great Barrier Reef', 'AU'], ['Twelve Apostles', 'AU', 'The Twelve Apostles (Victoria)']
+  ['Angel Falls', 'VE'], ['Sugarloaf Mountain', 'BR'], ['Milford Sound', 'NZ'], ['Great Barrier Reef', 'AU'], ['Twelve Apostles', 'AU', 'The Twelve Apostles (Victoria)'],
+  // Added 2026-11-18 (names avoid giving the country away where possible)
+  ['Burj Al Arab', 'AE'], ['Notre-Dame Cathedral', 'FR', 'Notre-Dame de Paris', ['Notre-Dame', 'Notre Dame', 'Notre-Dame de Paris']], ['Arc de Triomphe', 'FR'],
+  ['Buckingham Palace', 'GB'], ['Westminster Abbey', 'GB'], ["Giant's Causeway", 'GB', null, ['Giants Causeway']], ['Cologne Cathedral', 'DE'],
+  ['Milan Cathedral', 'IT', null, ['Duomo di Milano']], ['The Pantheon', 'IT', 'Pantheon, Rome', ['Pantheon']], ['Grand Canal of Venice', 'IT', 'Grand Canal (Venice)', ['Grand Canal']],
+  ['Mount Fuji', 'JP', null, ['Fuji', 'Fujisan']], ['Itsukushima Shrine', 'JP', null, ['Itsukushima']], ['Temple of Heaven', 'CN'], ['The Bund', 'CN', null, ['Bund']],
+  ['Empire State Building', 'US'], ['Times Square', 'US'], ['Las Vegas Strip', 'US', null, ['The Strip']], ['Banff National Park', 'CA', null, ['Banff']],
+  ['Parliament Hill', 'CA'], ['Table Mountain', 'ZA'], ['Mount Kilimanjaro', 'TZ', null, ['Kilimanjaro']], ['Serengeti', 'TZ', 'Serengeti National Park', ['Serengeti National Park']],
+  ['Great Sphinx of Giza', 'EG', null, ['Great Sphinx', 'Sphinx']], ['Karnak Temple', 'EG', 'Karnak', ['Karnak']], ['Chefchaouen', 'MA'],
+  ['Lotus Temple', 'IN'], ['Hawa Mahal', 'IN', null, ['Palace of Winds']], ['Wat Arun', 'TH'], ['Grand Palace', 'TH'], ['Gardens by the Bay', 'SG'],
+  ['Tanah Lot', 'ID'], ['Chocolate Hills', 'PH'], ['Palacio de Bellas Artes', 'MX', null, ['Palace of Fine Arts', 'Bellas Artes']],
+  ['Copacabana Beach', 'BR', 'Copacabana, Rio de Janeiro', ['Copacabana']], ['Nazca Lines', 'PE', null, ['Nasca Lines']], ['Sydney Harbour Bridge', 'AU', null, ['Harbour Bridge']],
+  ['Hobbiton', 'NZ', 'Hobbiton Movie Set', ['Hobbiton Movie Set']], ['Peterhof Palace', 'RU', null, ['Peterhof']], ['Winter Palace', 'RU', null, ['Hermitage']],
+  ['Hallstatt', 'AT'], ['Walls of Dubrovnik', 'HR', null, ['Dubrovnik walls', 'Dubrovnik']], ['Prague Castle', 'CZ'],
+  ['Parliament Building, Budapest', 'HU', 'Hungarian Parliament Building', ['Hungarian Parliament Building', 'Budapest Parliament']],
+  ['Kinderdijk Windmills', 'NL', 'Kinderdijk', ['Kinderdijk']], ['Rijksmuseum', 'NL'], ['Pena Palace', 'PT', null, ['Palácio da Pena']], ['Santorini', 'GR'],
+  ['Galata Tower', 'TR'], ['Wadi Rum', 'JO'], ["Tiger's Nest Monastery", 'BT', 'Paro Taktsang', ['Paro Taktsang', "Tiger's Nest", 'Taktsang']]
 ];
 // Former names: [old name, current name, country, year renamed (if one clear year), city?]
 const FORMER = [
@@ -491,9 +507,10 @@ const FORMER = [
 const CITY_ALTS = { 'Saint Petersburg': ['St. Petersburg', 'St Petersburg'], 'New York City': ['New York', 'NYC'], 'Ho Chi Minh City': ['Ho Chi Minh', 'HCMC'], 'Gdańsk': ['Gdansk'], "N'Djamena": ['Ndjamena'], 'Bengaluru': ['Bangalore'] };
 const countryByCode = Object.fromEntries(countries.map(c => [c.c, c]));
 const trivia = [];
-for (const [n, cc, wiki, alts] of LANDMARKS) {
+// img: a Wikimedia Commons file to use instead of the article's lead photo (when that one is a poor fit)
+for (const [n, cc, wiki, alts, img] of LANDMARKS) {
   const ct = countryByCode[cc]; if (!ct) { console.warn('  landmark country?', n, cc); continue; }
-  trivia.push({ c: slug('lm', n), n, t: 'landmark', cc, ans: ct.n, a: ct.a, alts: alts || [], r: ct.r, sr: ct.sr, wiki: wiki || n });
+  trivia.push({ c: slug('lm', n), n, t: 'landmark', cc, ans: ct.n, a: ct.a, alts: alts || [], r: ct.r, sr: ct.sr, wiki: wiki || n, ...(img ? { img } : {}) });
 }
 for (const row of FORMER) {
   const city = typeof row[1] === 'string' && row[1].length > 2;
@@ -507,7 +524,10 @@ console.log('trivia:', trivia.filter(x => x.t === 'landmark').length, 'landmarks
 /* ---------------- Provinces and states of Canada, Australia, Germany and Mexico ----------------
    Outlines: Natural Earth 1:10m admin-1 (public domain), simplified with shared borders kept.
    Flags: Canada from region-flags; Australia and Germany from niemela/flags (Wikimedia Commons, public domain).
-   Mexico's states have no official flags, so Mexico has no flag topics. */
+   Mexico: most states have no official flag; region-flags has the banner each state uses (usually its coat of arms on white;
+   Jalisco and Tlaxcala have adopted flags). Those files are large (some embed photos), so they're stored as 300px PNGs (p: base64). */
+const { Resvg } = require('@resvg/resvg-js');
+const REGION_FLAGS = 'https://raw.githubusercontent.com/fonttools/region-flags/gh-pages/svg/';
 const { topology } = require('topojson-server');
 const { presimplify, simplify, quantile, sphericalTriangleArea } = require('topojson-simplify');
 const { geoConicConformal, geoConicEqualArea } = await import('d3-geo');
@@ -543,7 +563,7 @@ const PLACES = {
       ['SH', 'Schleswig-Holstein', 'Kiel', 'state'], ['TH', 'Thuringia', 'Erfurt', 'state', ['Thüringen']]
     ] },
   mx: { a3: 'MEX', label: 'Mexico', proj: () => geoConicConformal().parallels([17.5, 29.5]).rotate([102, 0]), keep: 0.25, minA: 3,
-    flags: null, codeFix: { DIF: 'CMX' }, drop: ['MX-X01~'],
+    flags: async code => (await fetch(`${REGION_FLAGS}MX-${code}.svg`)).text(), png: true, codeFix: { DIF: 'CMX' }, drop: ['MX-X01~'],
     rows: [
       ['AGU', 'Aguascalientes', 'Aguascalientes', 'state'], ['BCN', 'Baja California', 'Mexicali', 'state'], ['BCS', 'Baja California Sur', 'La Paz', 'state'],
       ['CAM', 'Campeche', 'Campeche', 'state', [], ['San Francisco de Campeche']], ['CHP', 'Chiapas', 'Tuxtla Gutiérrez', 'state', [], ['Tuxtla']],
@@ -566,7 +586,12 @@ for (const [key, P] of Object.entries(PLACES)) {
   fs.writeFileSync(`public/data/${key}.json`, JSON.stringify(rows));
   if (P.flags) {
     const imgs = [];
-    for (const r of rows) imgs.push({ c: r.c, s: optimize(await P.flags(r.c), { multipass: true, floatPrecision: 1, plugins: ['preset-default', 'removeDimensions'] }).data });
+    for (const r of rows) {
+      const svg = await P.flags(r.c);
+      if (!svg.trim().startsWith('<')) throw new Error('flag download failed: ' + key + ' ' + r.c);
+      imgs.push(P.png ? { c: r.c, p: Buffer.from(new Resvg(svg, { fitTo: { mode: 'width', value: 300 } }).render().asPng()).toString('base64') }
+        : { c: r.c, s: optimize(svg, { multipass: true, floatPrecision: 1, plugins: ['preset-default', 'removeDimensions'] }).data });
+    }
     writeImages(`public/data/${key}-flags.json`, imgs);
   }
   // Map: simplify in lon/lat with shared borders, then project

@@ -242,13 +242,13 @@ fs.writeFileSync('public/site.webmanifest', JSON.stringify({ name: 'GeoGym', sho
 
 /* ---------- preview cards (1200×630 PNG) ---------- */
 const C = { bg: '#f6f7f9', ink: '#15171c', muted: '#5b6270', accent: '#2f6bff', land: '#dfe3e8', line: '#ffffff', good: '#1f9d55', bad: '#e5484d', surface: '#ffffff' };
-const imgs = {};
-const imagesOf = f => imgs[f] || (imgs[f] = Object.fromEntries(read(f).map(x => [x.c, x.s])));
 const svgUri = s => 'data:image/svg+xml;base64,' + Buffer.from(s).toString('base64');
+const imgs = {};
+const imagesOf = f => imgs[f] || (imgs[f] = Object.fromEntries(read(f).map(x => [x.c, x.p ? 'data:image/png;base64,' + x.p : svgUri(x.s)])));
 const maps = {};
 const mapOf = f => maps[f] || (maps[f] = read(f));
 const MAPFILE = { countries: 'data/world-map.json', nature: 'data/world-map.json', trivia: 'data/world-map.json', states: 'data/us-map.json', ca: 'data/ca-map.json', au: 'data/au-map.json', de: 'data/de-map.json', mx: 'data/mx-map.json' };
-const FLAGFILE = { countries: 'data/flags.json', states: 'data/state-flags.json', ca: 'data/ca-flags.json', au: 'data/au-flags.json', de: 'data/de-flags.json' };
+const FLAGFILE = { countries: 'data/flags.json', states: 'data/state-flags.json', ca: 'data/ca-flags.json', au: 'data/au-flags.json', de: 'data/de-flags.json', mx: 'data/mx-flags.json' };
 
 function wrap(text, max) {
   const words = text.split(' '), lines = [];
@@ -259,7 +259,7 @@ function flagGrid(set, codes, x, y, w, h) {
   const im = imagesOf(FLAGFILE[set]), gap = 24, fw = (w - gap) / 2, fh = Math.min(fw * 3 / 4, (h - gap) / 2);
   return codes.slice(0, 4).map((c, i) => {
     const fx = x + (i % 2) * (fw + gap), fy = y + Math.floor(i / 2) * (fh + gap);
-    return `<rect x="${fx + 4}" y="${fy + 8}" width="${fw}" height="${fh}" rx="14" fill="#000" opacity=".08"/><svg x="${fx}" y="${fy}" width="${fw}" height="${fh}"><clipPath id="f${i}"><rect width="${fw}" height="${fh}" rx="14"/></clipPath><image clip-path="url(#f${i})" href="${svgUri(im[c])}" width="${fw}" height="${fh}" preserveAspectRatio="xMidYMid slice"/></svg>`;
+    return `<rect x="${fx + 4}" y="${fy + 8}" width="${fw}" height="${fh}" rx="14" fill="#000" opacity=".08"/><svg x="${fx}" y="${fy}" width="${fw}" height="${fh}"><clipPath id="f${i}"><rect width="${fw}" height="${fh}" rx="14"/></clipPath><image clip-path="url(#f${i})" href="${im[c]}" width="${fw}" height="${fh}" preserveAspectRatio="xMidYMid slice"/></svg>`;
   }).join('');
 }
 function mapArt(set, x, y, w, h, { hi = [], hi2 = [], feats = [], one = null, focus = null } = {}) {
@@ -295,7 +295,7 @@ ${art}
   fs.writeFileSync(`public/cards/${file}.png`, png);
 }
 const ART = { x: 640, y: 110, w: 500, h: 410 };
-const SAMPLE = { countries: ['JP', 'BR', 'KE', 'CA'], states: ['CA', 'TX', 'NM', 'CO'], ca: ['QC', 'BC', 'NS', 'NU'], au: ['NSW', 'VIC', 'QLD', 'WA'], de: ['BY', 'BE', 'HH', 'SN'] };
+const SAMPLE = { countries: ['JP', 'BR', 'KE', 'CA'], states: ['CA', 'TX', 'NM', 'CO'], ca: ['QC', 'BC', 'NS', 'NU'], au: ['NSW', 'VIC', 'QLD', 'WA'], de: ['BY', 'BE', 'HH', 'SN'], mx: ['JAL', 'TLA', 'YUC', 'NLE'] };
 const LOCATE = { countries: 'BR', states: 'CO', ca: 'QC', au: 'WA', de: 'BY', mx: 'JAL' };
 const ONE = { countries: 'IT', states: 'TX', ca: 'NS', au: 'TAS', de: 'BY', mx: 'YUC' };
 fs.mkdirSync('public/cards', { recursive: true });
@@ -321,7 +321,7 @@ function artFor(t, rows) {
   if (t.kind === 'fact') {
     const r = rows.find(z => z.c === 'JP') || sample;
     const v = t.field === 'cap' ? r.cap : Array.isArray(r[t.field]) ? r[t.field][0] : r[t.field];
-    const flag = FLAGFILE[t.set] ? `<svg x="${x + 90}" y="${y + 10}" width="320" height="240"><clipPath id="ff"><rect width="320" height="240" rx="16"/></clipPath><image clip-path="url(#ff)" href="${svgUri(imagesOf(FLAGFILE[t.set])[r.c])}" width="320" height="240" preserveAspectRatio="xMidYMid slice"/></svg>` : mapArt(t.set, x + 40, y, w - 80, 250, { one: r.c });
+    const flag = FLAGFILE[t.set] ? `<svg x="${x + 90}" y="${y + 10}" width="320" height="240"><clipPath id="ff"><rect width="320" height="240" rx="16"/></clipPath><image clip-path="url(#ff)" href="${imagesOf(FLAGFILE[t.set])[r.c]}" width="320" height="240" preserveAspectRatio="xMidYMid slice"/></svg>` : mapArt(t.set, x + 40, y, w - 80, 250, { one: r.c });
     return flag + tile(v, x + 30, y + 290, w - 60, 110, String(v).length > 14 ? 46 : 60);
   }
   return mapArt(t.set, x, y, w, h);

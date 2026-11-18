@@ -172,9 +172,12 @@ main { flex: 1; display: flex; flex-direction: column; align-items: center; padd
 .q-stack.answered .flag-answers .flag-answer { flex: 0 1 200px; min-width: 0; }
 .result-sub:empty { display: none; }
 /* Landmark photo in the question */
-.qphoto { position: relative; margin: 0 0 14px; width: min(100%, 520px); aspect-ratio: 3 / 2; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--track); box-shadow: var(--flag-shadow); }
-.qphoto img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.qphoto.loading img { opacity: 0; }
+/* Shown whole at the photo's own shape, never cropped (tall towers used to lose their tops) */
+.qphoto { position: relative; margin: 0 0 14px; display: flex; justify-content: center; max-width: 100%; }
+.qphoto img { display: block; max-width: min(100%, 560px); max-height: 30vh; width: auto; height: auto; border-radius: 14px; border: 1px solid var(--line); box-shadow: var(--flag-shadow); }
+.qphoto.big img { max-height: 40vh; }
+.qphoto.loading { width: min(100%, 420px); aspect-ratio: 3 / 2; max-height: 30vh; border-radius: 14px; background: var(--track); overflow: hidden; }
+.qphoto.loading img { opacity: 0; position: absolute; }
 .qphoto.loading::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .25), transparent); animation: shimmer 1.2s infinite; }
 .qphoto.broken img { display: none; }
 .q-head.with-photo .qtext { font-size: clamp(24px, 4.2vh, 38px); padding: 10px 26px; }
@@ -246,7 +249,7 @@ a.btn.primary { color: var(--bg); }
 .qtext { font-size: clamp(36px, 7vh, 64px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; text-align: center; padding: 28px 40px; min-width: min(360px, 100%); max-width: 100%; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: var(--flag-shadow); overflow-wrap: anywhere; transition: font-size .3s, padding .3s; }
 .tile-text, .card-text { display: grid; place-items: center; aspect-ratio: 4 / 3; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-weight: 800; font-size: 22px; padding: 6px; text-align: center; overflow-wrap: anywhere; line-height: 1.15; }
 .card-text { font-size: 18px; }
-.card-photo { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); background: var(--track); }
+.card-photo { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 8px; border: 1px solid var(--line); background: var(--track); }
 .shape, .tile-shape, .card-shape, .mini-shape { display: block; width: 100%; aspect-ratio: 4 / 3; }
 .shape path, .tile-shape path, .card-shape path, .mini-shape path { fill: var(--accent); stroke: none; }
 .qshape { aspect-ratio: 4 / 3; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 12px; box-shadow: var(--flag-shadow); }
@@ -313,8 +316,9 @@ a.btn.primary { color: var(--bg); }
   .q-stack.answered .map { aspect-ratio: auto; flex: 1 1 0; min-height: 160px; }
   .q-stack.answered .flag-answers .flag { max-height: calc(14vh); object-fit: contain; }
   .qtext { padding: 32px 56px; }
-  .qphoto { width: auto; height: min(300px, calc(100vh - 500px)); min-height: 140px; }
-  .qphoto.big { height: min(400px, calc(100vh - 380px)); min-height: 180px; }
+  .qphoto img { max-height: max(140px, min(300px, calc(100vh - 500px))); }
+  .qphoto.big img { max-height: max(180px, min(400px, calc(100vh - 380px))); }
+  .qphoto.loading { max-height: max(140px, min(300px, calc(100vh - 500px))); }
   .q-head.with-photo .qtext { padding: 10px 28px; }
   .q-stack.answered .qtext { font-size: 28px; padding: 10px 24px; }
   .qshape { width: min(440px, calc((100vh - 360px) * 4 / 3)); }

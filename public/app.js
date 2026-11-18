@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611182131";
+const VERSION = "202611182139";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -103,7 +103,7 @@ TOPICS.push(
   ...placeTopics("ca", "Canada", "Canadian", "province or territory", "provinces", { flags: true, abbr: true, terr: true }),
   ...placeTopics("au", "Australia", "Australian", "state or territory", "states", { flags: true, abbr: true, terr: true }),
   ...placeTopics("de", "Germany", "German", "state", "states", { flags: true }),
-  ...placeTopics("mx", "Mexico", "Mexican", "state", "states", {})
+  ...placeTopics("mx", "Mexico", "Mexican", "state", "states", { flags: true })
 );
 TOPICS.forEach(t => { t.modes = t.modes || ALL_MODES; });
 const TOPIC = Object.fromEntries(TOPICS.map(t => [t.id, t]));
@@ -117,7 +117,7 @@ const SETS = {
   ca: { data: "data/ca.json", images: "data/ca-flags.json", map: "data/ca-map.json", whole: "all of Canada" },
   au: { data: "data/au.json", images: "data/au-flags.json", map: "data/au-map.json", whole: "all of Australia" },
   de: { data: "data/de.json", images: "data/de-flags.json", map: "data/de-map.json", whole: "all of Germany" },
-  mx: { data: "data/mx.json", images: null, map: "data/mx-map.json", whole: "all of Mexico" }
+  mx: { data: "data/mx.json", images: "data/mx-flags.json", map: "data/mx-map.json", whole: "all of Mexico" }
 };
 Object.values(SETS).forEach(s => Object.assign(s, { rows: null, img: {}, loading: null }));
 const cap1 = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -249,7 +249,7 @@ function buildTopic(def) {
         if (def.set === "trivia") {
           const city = r.t === "former-city", lm = r.t === "landmark";
           const fact = lm ? `${r.n} is in ${r.ans} · ${where(r)}` : `${r.n} is now ${r.ans}${r.y ? `, renamed in ${r.y}` : ""} · ${city ? countryName(r.cc) : where(r)}`;
-          const photo = def.photoQ && lmPhotos && lmPhotos[r.wiki] || null;
+          const photo = def.photoQ ? landmarkPhoto(r) : null;
           // Landmark photos: the photo is the question and the landmark's name is the answer
           if (def.photoOnly) return { ...base, cap: null, q: r.n, ans: r.n, alts: r.alts || [], mid: r.cc, fact, photo, ask: null };
           return { ...base, cap: null, q: r.n, ans: r.ans, alts: r.a || [], mid: r.cc, fact, photo,
@@ -820,6 +820,19 @@ function loadLandmarkPhotos() {
   }
   return lmLoading;
 }
+// A landmark's photo: a chosen Wikimedia Commons file when the article's lead photo is a poor fit (row.img),
+// with the article's photo kept as a fallback in case that file ever fails to load
+function landmarkPhoto(r) {
+  const lead = lmPhotos && lmPhotos[r.wiki] || null;
+  if (!r.img) return lead;
+  const f = r.img.replace(/ /g, "_");
+  return { src: `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(f)}?width=640`, page: `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(f)}`, fallback: lead && lead.src };
+}
+// Swaps a photo that failed to load for its fallback (once); returns false when there's nothing left to try
+function photoFallback(im, photo) {
+  if (photo && photo.fallback && im.dataset.fb !== "1") { im.dataset.fb = "1"; im.src = photo.fallback; return true; }
+  return false;
+}
 // Waits for the photos, but never more than ms (a slow connection falls back to names only)
 const landmarkPhotos = (ms = 5000) => Promise.race([loadLandmarkPhotos(), new Promise(res => setTimeout(res, ms))]);
 const preloadPhotos = items => items.forEach(it => { if (it && it.photo) new Image().src = it.photo.src; });
@@ -891,7 +904,7 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
   document.body.classList.remove("fit");
   const stack = host.querySelector(".q-stack"), belowEl = host.querySelector(".below"), fbEl = host.querySelector(".fb");
   const qph = host.querySelector(".qphoto");
-  if (qph) { const im = qph.querySelector("img"), done = () => qph.classList.remove("loading"); if (im.complete && im.naturalWidth) done(); else { im.onload = done; im.onerror = () => qph.classList.add("broken"); } }
+  if (qph) { const im = qph.querySelector("img"), done = () => qph.classList.remove("loading"); if (im.complete && im.naturalWidth) done(); else { im.onload = done; im.onerror = () => { if (!photoFallback(im, it.photo)) qph.classList.add("broken"); }; } }
 
   if (q.style === "map") {
     mountMap(host.querySelector("[data-map]"), { tips: false, dots: true, pick: code => { if (!answered) finish(q.ok.has(code), code, ""); } }).then(c => { mapCtl = c; });
@@ -1000,7 +1013,7 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
       if (def.photoQ && it.photo) {
         fbEl.innerHTML = resultRow + `<figure class="solo-photo loading"><img alt="${esc(it.label)}" src="${esc(it.photo.src)}"><figcaption><b>${esc(it.label)}</b> <span class="where">is in ${esc(it.row.ans)}</span> <a target="_blank" rel="noopener" href="${esc(it.photo.page)}">Wikipedia</a></figcaption></figure>`;
         const fig = fbEl.querySelector(".solo-photo"), im = fig.querySelector("img"), done = () => fig.classList.remove("loading");
-        if (im.complete && im.naturalWidth) done(); else { im.onload = done; im.onerror = done; }
+        if (im.complete && im.naturalWidth) done(); else { im.onload = done; im.onerror = () => { if (!photoFallback(im, it.photo)) done(); }; }
       } else {
       fbEl.innerHTML = resultRow + (photo ? `<div class="media">${mapFig}<figure class="cap-photo loading"><img alt="${esc(it.cap || it.label)}"><figcaption><b>${esc(it.cap || it.label)}</b><a target="_blank" rel="noopener">Wikipedia</a></figcaption></figure></div>` : mapFig) + tip;
       if (photo) {
@@ -1369,6 +1382,7 @@ const browse = (() => {
     }).join("")}</div>` : `<div class="empty">Nothing matches "${esc($("#brSearch").value)}".</div>`;
   }
   body().addEventListener("click", e => { const c = e.target.closest(".card.hidden"); if (c) { c.classList.remove("hidden", "sub-only"); c.setAttribute("aria-label", T.byId[c.dataset.card].ans); const im = c.querySelector(".card-photo"); if (im) im.alt = T.byId[c.dataset.card].label; } });
+  body().addEventListener("error", e => { const im = e.target; if (im.classList && im.classList.contains("card-photo")) { const c = im.closest("[data-card]"); photoFallback(im, c && T.byId[c.dataset.card] && T.byId[c.dataset.card].photo); } }, true);
   $("#brSearch").addEventListener("input", render);
   $("#brHide").addEventListener("change", render);
   $("#brAll").addEventListener("click", () => { tab = "all"; render(); });
@@ -1975,7 +1989,7 @@ function loadSet(name) {
   const s = SETS[name];
   if (s.ready) return Promise.resolve();
   if (!s.loading) s.loading = Promise.all([loadRows(name), s.images ? fetch(vurl(s.images)).then(r => { if (!r.ok) throw new Error("load"); return r.json(); }) : null, ...(s.needs || []).map(loadRows)]).then(([, imgs]) => {
-    if (imgs) imgs.forEach(f => { s.img[f.c] = URL.createObjectURL(new Blob([f.s], { type: "image/svg+xml" })); });
+    if (imgs) imgs.forEach(f => { s.img[f.c] = f.p ? "data:image/png;base64," + f.p : URL.createObjectURL(new Blob([f.s], { type: "image/svg+xml" })); });
     s.ready = true;
   }).catch(err => { s.loading = null; throw err; });
   return s.loading;

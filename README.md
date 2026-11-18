@@ -8,7 +8,7 @@ Browser geography quizzes, live at [geogym.party](https://geogym.party). It's a 
 
 ## Topics
 
-Pick a topic from the menu at the top right. Topics are grouped into five tabs: World, Trivia, Nature, Regions (the United States, Canada, Australia, Germany and Mexico, each under its own header) and Daily.
+Pick a topic from the menu at the top right. Topics are grouped into five tabs: World, Trivia, Nature, Regions (pick a country on the left to see its games: the United States, Canada, Australia, Germany and Mexico) and Daily.
 
 **World**
 - **Country flags**: 197 countries (the 193 UN members plus Kosovo, Palestine, Taiwan and Vatican City), plus an optional 35 territories.
@@ -23,8 +23,8 @@ Pick a topic from the menu at the top right. Topics are grouped into five tabs: 
 - **Currencies**, **Languages**, **Internet domains** and **Phone codes**.
 - **Demonyms**: what you call someone from each country (Comorian, Mosotho, Kittitian…).
 - **Which continent?** Countries on two continents (Russia, Turkey, Egypt…) accept both.
-- **Landmark → country** (95): a photo and the name of the landmark; which country is it in?
-- **Name the landmark** (95). Browse shows each landmark's photo: just the photo; name the landmark.
+- **Landmark → country** (145): a photo and the name of the landmark; which country is it in?
+- **Name the landmark** (145). Browse shows each landmark's photo: just the photo; name the landmark.
 - **Former names** (67): Burma, Siam, Ceylon, Zaire… and cities like Bombay, Constantinople and Saigon, with the year they were renamed.
 
 **Nature**
@@ -36,7 +36,7 @@ Pick a topic from the menu at the top right. Topics are grouped into five tabs: 
 - **State flags** (current as of 2026, including Minnesota's and Utah's 2024 flags and Mississippi's 2021 flag), **State capitals**, **Find states on the map**, **State shapes** and **State abbreviations** and **State nicknames** (the Beehive State, the Show-Me State…).
 
 **Canada, Australia, Germany and Mexico**
-- Flags (Canada, Australia, Germany), capitals, find on the map and shapes for every province, state and territory. Canada and Australia also have abbreviations. Mexico's states have no official flags, so Mexico has no flag topic.
+- Flags (all four), capitals, find on the map and shapes for every province, state and territory. Canada and Australia also have abbreviations. Mexico's states mostly have no official flags; the Mexico flags quiz uses the banner each state flies (usually its coat of arms on white), from region-flags, stored as 300px PNGs.
 
 **Daily**
 - **Daily challenge**: 10 questions from 10 different topics, the same for everyone each day. When you finish, **Copy result** copies a short score you can paste anywhere. Your daily streak is shown at the top.
