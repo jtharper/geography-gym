@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611182045";
+const VERSION = "202611182104";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -189,7 +189,7 @@ function loadProgress(id) {
   let s = { p: {}, best: {} };
   try {
     const raw = localStorage.getItem(`geography-gym-${id}-v1`) || (id === "flags" ? localStorage.getItem("flag-atlas-v1") : null);
-    if (raw) { const o = JSON.parse(raw); s = { p: o.p || {}, best: o.best || {}, n: o.n || 0 }; }
+    if (raw) { const o = JSON.parse(raw); s = { p: o.p || {}, best: o.best || {}, n: o.n || 0, round: o.round || null }; }
   } catch (e) {}
   return s;
 }
@@ -251,7 +251,7 @@ function buildTopic(def) {
           const fact = lm ? `${r.n} is in ${r.ans} · ${where(r)}` : `${r.n} is now ${r.ans}${r.y ? `, renamed in ${r.y}` : ""} · ${city ? countryName(r.cc) : where(r)}`;
           const photo = def.photoQ && lmPhotos && lmPhotos[r.wiki] || null;
           // Landmark photos: the photo is the question and the landmark's name is the answer
-          if (def.photoOnly) return { ...base, cap: null, q: r.n, ans: r.n, alts: [], mid: r.cc, fact, photo, ask: null };
+          if (def.photoOnly) return { ...base, cap: null, q: r.n, ans: r.n, alts: r.alts || [], mid: r.cc, fact, photo, ask: null };
           return { ...base, cap: null, q: r.n, ans: r.ans, alts: r.a || [], mid: r.cc, fact, photo,
             ask: lm ? null : city ? "What's this city called now?" : "What's this country called now?" };
         }
@@ -962,7 +962,7 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
     if (def.kind === "feature") keyHTML = `<span><i class="k hit"></i>${esc(it.ans)}</span>` + (pf ? `<span><i class="k miss"></i>${esc(T.byId[p].ans)} (your pick)</span>` : "");
     belowEl.textContent = "";
     const resultRow = `<div class="result"><div class="result-text"><span class="result-line ${ok ? "good" : "bad"}">${line}</span><span class="result-sub">${sub}</span></div>
-      <div class="next-row"><span class="kbd-hint">or press <span class="kbd">Enter</span></span><button type="button" class="btn primary" data-next>${nextLabel}</button></div></div>`;
+      <div class="next-row"><button type="button" class="btn primary" data-next>${nextLabel}</button></div></div>`;
     if (q.style === "map" || def.kind === "feature") {
       fbEl.innerHTML = resultRow;
       const mapEl = host.querySelector("[data-map]");
@@ -1049,12 +1049,15 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
 /* ---------- PRACTICE ---------- */
 const practice = (() => {
   let current = null, ctl = null, recent = [], streak = 0, done = false;
-  // Map topics (owner's request): every place in the region once per round, no repeats; the ones you missed lead the next round
+  // Map topics (owner's request): every place in the region once per round, no repeats; the ones you missed lead the next round.
+  // The round is saved with the topic's progress, so reloading or leaving the topic doesn't start it over.
   let round = null;
+  const saveRound = () => { T.prog.round = { key: round.key, seen: [...round.seen], missed: round.missed, next: round.next }; saveProgress(); };
   const host = () => $("#view-practice");
   const isRound = () => T.def.kind === "locate";
   function chooseRound() {
     const P = pool(), key = poolKey();
+    if (!round && T.prog.round && T.prog.round.key === key) { const r = T.prog.round; round = { key, seen: new Set(r.seen || []), missed: r.missed || [], next: r.next || [] }; }
     if (!round || round.key !== key) round = { key, seen: new Set(), missed: [], next: [] };
     let left = P.filter(it => !round.seen.has(it.id));
     if (!left.length) { round.seen = new Set(); round.next = shuffle(round.missed.slice()); round.missed = []; left = P.slice(); }
@@ -1084,7 +1087,7 @@ const practice = (() => {
       below: [roundText, streak ? `Streak ${streak}` : ""].filter(Boolean).join(" · "),
       onAnswer(ok) {
         done = true; streak = ok ? streak + 1 : 0;
-        if (isRound() && round && !ok) round.missed.push(q.it.id);
+        if (isRound() && round) { if (!ok) round.missed.push(q.it.id); saveRound(); }
         if (isCompare) { if (streak > (T.prog.best.streak || 0)) { T.prog.best.streak = streak; saveProgress(); } updateMeter(); }
         else grade(q.it.id, ok);
       },
@@ -1337,11 +1340,14 @@ const browse = (() => {
     const answerFirst = def.kind === "flag" || def.kind === "shape" || def.kind === "text" || def.kind === "compare" || def.kind === "feature";
     body().innerHTML = list.length ? `<div class="cards">${list.map((it, i) => {
       const s = status(it.id);
-      const vis = def.kind === "shape" ? shapeSVG(it.id, "card-shape") : def.kind === "text" ? textTile(it.q, "card-text") : def.kind === "feature" ? "" : img(it.id, hide && answerFirst ? "" : "Flag of " + it.label);
-      let title = answerFirst ? it.ans : it.label, sub;
+      // Landmarks show their photo (loaded as you scroll), with the name and the country under it
+      const photo = def.photoQ && it.photo;
+      const vis = photo ? `<img class="card-photo" loading="lazy" src="${esc(it.photo.src)}" alt="${hide ? "" : esc(it.label)}">` : def.kind === "shape" ? shapeSVG(it.id, "card-shape") : def.kind === "text" ? textTile(it.q, "card-text") : def.kind === "feature" ? "" : img(it.id, hide && answerFirst ? "" : "Flag of " + it.label);
+      let title = photo ? it.label : answerFirst ? it.ans : it.label, sub;
       if (def.kind === "flag") sub = it.cap || "";
       else if (def.kind === "compare") { title = `${i + 1}. ${it.label}`; sub = fmtVal(def.field, it.val); }
       else if (def.kind === "neighbors") sub = "Borders " + listJoin(it.nb.map(nameOf));
+      else if (photo) sub = it.row.ans;
       else if (def.kind === "shape" || def.kind === "text") sub = it.sr;
       else if (def.kind === "feature") sub = it.fact;
       else sub = it.ans;
@@ -1349,7 +1355,7 @@ const browse = (() => {
       return `<button type="button" class="card ${hideCls}" data-card="${it.id}" aria-label="${hide ? "Hidden answer, click to reveal" : esc(title)}">${vis}<span class="nm">${def.kind === "compare" ? "" : `<span class="dot ${s}" title="${s}"></span>`}<span>${esc(title)}</span></span><span class="sub">${esc(sub || "–")}</span></button>`;
     }).join("")}</div>` : `<div class="empty">Nothing matches "${esc($("#brSearch").value)}".</div>`;
   }
-  body().addEventListener("click", e => { const c = e.target.closest(".card.hidden"); if (c) { c.classList.remove("hidden", "sub-only"); c.setAttribute("aria-label", T.byId[c.dataset.card].ans); } });
+  body().addEventListener("click", e => { const c = e.target.closest(".card.hidden"); if (c) { c.classList.remove("hidden", "sub-only"); c.setAttribute("aria-label", T.byId[c.dataset.card].ans); const im = c.querySelector(".card-photo"); if (im) im.alt = T.byId[c.dataset.card].label; } });
   $("#brSearch").addEventListener("input", render);
   $("#brHide").addEventListener("change", render);
   $("#brAll").addEventListener("click", () => { tab = "all"; render(); });
@@ -1657,29 +1663,39 @@ const mpNewCode = () => [...crypto.getRandomValues(new Uint32Array(5))].map(x =>
 const mpDef = id => TOPIC[id] || TOPIC.flags;
 const mpStyle = def => def.styles.includes("choice") ? "choice" : def.styles[0];
 const mpSession = (k, v) => { try { if (v === undefined) { const x = sessionStorage.getItem(k); sessionStorage.removeItem(k); return x && JSON.parse(x); } sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } };
-// The game's questions: the same on both screens (seeded), never the same answer twice, like Quiz
-async function mpQuestions(cfg, seed) {
+// The game's questions: the same on both screens (seeded), never the same answer twice, like Quiz.
+// prev = the seeds of this room's earlier rounds: replaying them tells both browsers which questions were already played,
+// so "Challenge again" always brings new ones. When a quiz runs out, it starts over with everything.
+async function mpQuestions(cfg, seed, prev = []) {
   const def = mpDef(cfg.topic), style = mpStyle(def);
   const t = (await prepTopics([def], () => ({ region: "All", terr: false, style })))[def.id];
   const real = Math.random, prevT = T;
-  Math.random = seeded(seed); T = t;
+  T = t;
   try {
     const P = pool().sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-    if (def.kind === "compare") {
-      const left = shuffle(P), qs = [];
-      while (qs.length < cfg.len && left.length >= 2) { const a = left.shift(), b = compareOpponent(a, left) || left[0]; left.splice(left.indexOf(b), 1); qs.push(makeCompare(a, b)); }
-      return { t, qs };
-    }
-    const seen = new Set(), its = [];
-    for (const it of shuffle(P)) {
-      let k = it.id;
-      if (def.kind === "flag" && TWINS[it.id]) k = [it.id, TWINS[it.id]].sort().join("+");
-      else if (!def.repeatAnswers && (def.kind === "fact" || def.kind === "text")) k = def.multi ? it.vals.map(norm).sort().join("+") : norm(it.ans);
-      if (seen.has(k)) continue;
-      seen.add(k); its.push(it);
-      if (its.length >= cfg.len) break;
-    }
-    return { t, qs: its.map(it => makeQuestion(it, style)) };
+    const keyOf = it => def.kind === "flag" && TWINS[it.id] ? [it.id, TWINS[it.id]].sort().join("+")
+      : !def.repeatAnswers && (def.kind === "fact" || def.kind === "text") ? (def.multi ? it.vals.map(norm).sort().join("+") : norm(it.ans)) : it.id;
+    const used = new Set();
+    const round = s => {
+      const pickFrom = avail => {
+        Math.random = seeded(s);
+        if (def.kind === "compare") {
+          const left = shuffle(avail), qs = [];
+          while (qs.length < cfg.len && left.length >= 2) { const a = left.shift(), b = compareOpponent(a, left) || left[0]; left.splice(left.indexOf(b), 1); qs.push(makeCompare(a, b)); }
+          return { qs, keys: qs.flatMap(q => [q.a.id, q.b.id]) };
+        }
+        const seen = new Set(), its = [];
+        for (const it of shuffle(avail)) { const k = keyOf(it); if (seen.has(k)) continue; seen.add(k); its.push(it); if (its.length >= cfg.len) break; }
+        return { qs: its.map(it => makeQuestion(it, style)), keys: [...seen] };
+      };
+      let r = pickFrom(P.filter(it => !used.has(def.kind === "compare" ? it.id : keyOf(it))));
+      if (r.qs.length < Math.min(cfg.len, def.kind === "compare" ? Math.floor(P.length / 2) : P.length)) { used.clear(); r = pickFrom(P); }
+      r.keys.forEach(k => used.add(k));
+      return r.qs;
+    };
+    let qs = [];
+    for (const s of [...prev, seed]) qs = round(s);
+    return { t, qs };
   } finally { Math.random = real; T = prevT; }
 }
 const MP_ERRORS = {
@@ -1692,7 +1708,7 @@ const MP_ERRORS = {
   lost: ["Connection lost", "The connection to the game dropped."]
 };
 const mp = (() => {
-  let ws = null, code = null, me = null, room = null, game = null, opp = null, timer = null, token = 0, rematchAsked = false;
+  let ws = null, code = null, me = null, room = null, game = null, opp = null, timer = null, token = 0, rematchAsked = false, series = null;
   const host = () => sHost();
   const send = msg => { try { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); } catch (e) {} };
   const other = () => room && room.players.find(p => p.id !== me);
@@ -1780,17 +1796,18 @@ const mp = (() => {
     if (room) { room.status = "playing"; room.cfg = m.cfg; }
     const them = other();
     opp = { id: them && them.id, name: them ? them.name : "Your opponent", i: 0, right: 0, done: false, left: false };
-    const built = mpQuestions(m.cfg, m.seed).catch(() => null);
+    if (!series || series.opp !== opp.id) series = { opp: opp.id, me: 0, them: 0, scored: 0 };
+    const built = mpQuestions(m.cfg, m.seed, m.prev || []).catch(() => null);
     built.then(b => { if (b) preloadPhotos(b.qs.map(q => q.it)); });
     const startAt = Date.now() + (m.inMs || 3000);
-    const draw = () => { const s = Math.ceil((startAt - Date.now()) / 1000); host().innerHTML = `<div class="setup mp-page"><p class="mp-sub">${esc(mpDef(m.cfg.topic).name)} vs ${esc(opp.name)}</p><div class="mp-count">${Math.max(1, s)}</div><p class="mp-sub">Get ready…</p></div>`; };
+    const draw = () => { const s = Math.ceil((startAt - Date.now()) / 1000); host().innerHTML = `<div class="setup mp-page"><p class="mp-sub">${m.game > 1 ? `Round ${m.game} · ` : ""}${esc(mpDef(m.cfg.topic).name)} vs ${esc(opp.name)}</p><div class="mp-count">${Math.max(1, s)}</div><p class="mp-sub">Get ready…</p></div>`; };
     draw(); timer = setInterval(draw, 200);
     const b = await built;
     await new Promise(r => setTimeout(r, Math.max(0, startAt - Date.now())));
     if (my !== token) return;
     stopTimer();
     if (!b || !b.qs.length) { host().innerHTML = loadingCard("This quiz didn't load. Check your connection and refresh the page."); return; }
-    game = { ...b, cfg: m.cfg, i: 0, right: 0, marks: [], t0: Date.now(), done: false, over: false };
+    game = { ...b, cfg: m.cfg, n: m.game, i: 0, right: 0, marks: [], t0: Date.now(), done: false, over: false };
     timer = setInterval(() => { const el = $("#qTime"); if (el && game && !game.done) el.textContent = fmtTenths((Date.now() - game.t0) / 1000); }, 100);
     ask();
   }
@@ -1843,12 +1860,15 @@ const mp = (() => {
     else head = "It's a tie!";
     const iWin = !oppDone || mine.right > o.right || (mine.right === o.right && mine.ms < o.ms);
     const theyWin = oppDone && !iWin && !(mine.right === o.right && mine.ms === o.ms);
+    // Running score for this pair of players (counted once per round)
+    if (series && series.scored !== g.n) { series.scored = g.n; if (iWin) series.me++; else if (theyWin) series.them++; }
+    const tally = series && (series.me + series.them) > 0 && g.n > 1 ? `<p class="mp-sub">Round ${g.n} · You ${series.me} – ${series.them} ${esc(opp.name)}</p>` : "";
     const card = (name, r, win, sub) => `<div class="mp-player${win ? " win" : ""}"><small>${esc(name)}</small><span class="big">${r == null ? "–" : r}<small> / ${n}</small></span><small>${sub}</small></div>`;
     const canRematch = !g.oppGone && !opp.left && ws;
     host().innerHTML = `<div class="setup mp-page">
-      <h1>${esc(head)}</h1>
+      <h1>${esc(head)}</h1>${tally}
       <div class="mp-players">${card("You", mine.right, iWin, fmtTenths(mine.ms / 1000))}${card(opp.name, oppDone ? o.right : null, theyWin, oppDone ? fmtTenths(o.ms / 1000) : "left the game")}</div>
-      ${canRematch ? `<button class="btn primary" type="button" id="mpRematch"${rematchAsked ? " disabled" : ""}>${rematchAsked ? `Waiting for ${esc(opp.name)}…` : g.oppRematch ? `${esc(opp.name)} wants a rematch! Play again` : "Rematch"}</button>` : `<p class="mp-note">${esc(opp.name)} left the game.</p>`}
+      ${canRematch ? `<button class="btn primary" type="button" id="mpRematch"${rematchAsked ? " disabled" : ""}>${rematchAsked ? `Waiting for ${esc(opp.name)}…` : g.oppRematch ? `${esc(opp.name)} wants to go again! Challenge again` : "Challenge again"}</button>` : `<p class="mp-note">${esc(opp.name)} left the game.</p>`}
       <div class="mp-row"><button class="btn" type="button" id="mpNew">New game</button><button class="btn" type="button" id="mpLeave">Leave</button></div>
     </div>${resultList(g.qs.map(q => ({ t: g.t, q })), g.marks)}`;
     const rb = $("#mpRematch"); if (rb) rb.addEventListener("click", () => { rematchAsked = true; send({ t: "rematch" }); results(); });

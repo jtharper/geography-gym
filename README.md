@@ -24,7 +24,7 @@ Pick a topic from the menu at the top right. Topics are grouped into five tabs: 
 - **Demonyms**: what you call someone from each country (Comorian, Mosotho, Kittitian…).
 - **Which continent?** Countries on two continents (Russia, Turkey, Egypt…) accept both.
 - **Landmark → country** (95): a photo and the name of the landmark; which country is it in?
-- **Name the landmark** (95): just the photo; name the landmark.
+- **Name the landmark** (95). Browse shows each landmark's photo: just the photo; name the landmark.
 - **Former names** (67): Burma, Siam, Ceylon, Zaire… and cities like Bombay, Constantinople and Saigon, with the year they were renamed.
 
 **Nature**
@@ -47,7 +47,7 @@ In Practice, after every answer, a map zooms to the place, highlighted in blue. 
 
 ## Modes
 
-- **Practice**: endless spaced repetition. Things you miss come back sooner, and an item counts as learned after 3 correct answers in a row. Map topics go round by round instead: every place in the region comes up once before anything repeats ("12 of 50 this round"), and the ones you missed lead the next round.
+- **Practice**: endless spaced repetition. Things you miss come back sooner, and an item counts as learned after 3 correct answers in a row. Map topics go round by round instead: every place in the region comes up once before anything repeats ("12 of 50 this round"), and the ones you missed lead the next round. The round is saved, so reloading or switching topics doesn't restart it.
 - **Quiz**: a race against the clock, 10, 20, 50 or all of them. Every place comes up once, the same answer never repeats (one Euro question, not twenty) and of two identical flags only one appears. Answers move straight on (no map), the clock shows tenths of a second, and your best score and time are saved for each topic, region, length and answer style. Retry the ones you missed at the end. **Share** sends a picture of your score and time (with green and red squares for up to 20 questions) and a link to the same quiz; **Copy result** copies it as text.
 - **Name them**: type every one you can think of. The clock is running.
 - **Browse**: a gallery you can search. Country flags also has a look-alikes section for flags that are easy to mix up.
@@ -60,7 +60,7 @@ Each topic keeps its own progress. To add a topic, add an entry to `TOPICS` at t
 
 ## Pages for search engines and link previews
 
-**Multiplayer** (live 1v1): the Multiplayer button in the header opens a menu to make a game (pick a quiz and 10 or 20 questions) or join one with a 5-character code. The game page is `#mp-CODE`, so a link like `geogym.party/#mp-K7M2Q` opens the join screen. Both players get the same questions (built in the browser from a seed the server hands out), see each other's progress live, and get a result screen with a rematch button. Most right wins; the faster time breaks a tie.
+**Multiplayer** (live 1v1): the Multiplayer button in the header opens a menu to make a game (pick a quiz and 10 or 20 questions) or join one with a 5-character code. The game page is `#mp-CODE`, so a link like `geogym.party/#mp-K7M2Q` opens the join screen. Both players get the same questions (built in the browser from a seed the server hands out), see each other's progress live, and get a result screen with **Challenge again**, which starts another round with all-new questions: the server sends the room's earlier seeds, so both browsers skip every question already played until the quiz runs out. A running score ("Round 3 · You 2 – 1 Bob") is shown from round 2. Most right wins; the faster time breaks a tie.
 
 The server is a small Cloudflare Worker in `multiplayer/` (one Durable Object per game code, WebSockets with hibernation), served at `wss://mp.geogym.party`. It's deployed separately from the site with Cloudflare Workers Builds (root directory `multiplayer`, deploy command `npx wrangler deploy`). To run it locally: `cd multiplayer && npm install && npm run dev` (port 8787); the site uses `ws://127.0.0.1:8787` automatically when opened on localhost.
 

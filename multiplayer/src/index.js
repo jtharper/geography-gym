@@ -5,7 +5,7 @@
 //   wss://mp.geogym.party/room/K7M2Q?name=Alex&host=1&topic=flags&len=10&v=<site version>
 //
 // Messages from a player:  {t:"start"} (host only), {t:"progress", i, right}, {t:"done", right, ms}, {t:"rematch"}
-// Messages to players:     {t:"state", ...}, {t:"start", seed, game, inMs}, {t:"opp", i, right}, {t:"oppdone", right, ms},
+// Messages to players:     {t:"state", ...}, {t:"start", seed, prev, game, inMs} (prev = this room's earlier seeds, so no question repeats), {t:"opp", i, right}, {t:"oppdone", right, ms},
 //                          {t:"over", results}, {t:"rematch", name}, {t:"left", name}, {t:"error", code}
 import { DurableObject } from "cloudflare:workers";
 
@@ -59,7 +59,7 @@ export class Room extends DurableObject {
       // A new game: the code must be free (no one in it right now)
       if (live.length) return this.refuse("taken");
       const len = [10, 20].includes(+q.get("len")) ? +q.get("len") : 10;
-      room = { cfg: { topic: clean(q.get("topic")).slice(0, 40) || "flags", len, v: clean(q.get("v")) }, hostId: null, status: "lobby", game: 0, seed: 0, results: {}, rematch: [] };
+      room = { cfg: { topic: clean(q.get("topic")).slice(0, 40) || "flags", len, v: clean(q.get("v")) }, hostId: null, status: "lobby", game: 0, seed: 0, seeds: [], results: {}, rematch: [] };
     } else {
       if (!room || !live.some(p => p.id === room.hostId)) return this.refuse("nogame");
       if (live.length >= 2) return this.refuse("full");
@@ -89,10 +89,11 @@ export class Room extends DurableObject {
         this.broadcast({ t: "rematch", id: me.id, name: me.name }, ws);
         if (room.rematch.length < 2) return this.save(room);
       }
+      const prev = (room.seeds || []).slice(-40);
       room.status = "playing"; room.game++; room.seed = crypto.getRandomValues(new Uint32Array(1))[0];
-      room.results = {}; room.rematch = [];
+      room.seeds = [...prev, room.seed]; room.results = {}; room.rematch = [];
       await this.save(room);
-      return this.broadcast({ t: "start", seed: room.seed, game: room.game, cfg: room.cfg, inMs: 3000 });
+      return this.broadcast({ t: "start", seed: room.seed, prev, game: room.game, cfg: room.cfg, inMs: 3000 });
     }
     if (room.status !== "playing") return;
     if (msg.t === "progress") {

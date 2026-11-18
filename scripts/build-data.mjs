@@ -444,7 +444,7 @@ console.log('nature:', ['lake', 'river', 'range', 'peak', 'sea'].map(t => `${nat
 /* ---------------- Trivia: famous landmarks and former names ---------------- */
 // Landmarks: [name, country, Wikipedia article (if different), other names]
 const LANDMARKS = [
-  ['Machu Picchu', 'PE'], ['Taj Mahal', 'IN'], ['Great Wall of China', 'CN', null, ['Great Wall']], ['Petra', 'JO'], ['Colosseum', 'IT', null, ['Coliseum']],
+  ['Machu Picchu', 'PE'], ['Taj Mahal', 'IN'], ['Great Wall of China', 'CN', null, ['Great Wall']], ['Petra', 'JO'], ['The Colosseum', 'IT', 'Colosseum', ['Colosseum', 'Coliseum']],
   ['Christ the Redeemer', 'BR', 'Christ the Redeemer (statue)'], ['Chichén Itzá', 'MX', 'Chichen Itza', ['Chichen Itza']], ['Eiffel Tower', 'FR'],
   ['Statue of Liberty', 'US'], ['Big Ben', 'GB'], ['Sydney Opera House', 'AU'], ['Pyramids of Giza', 'EG', 'Giza pyramid complex', ['Great Pyramid of Giza']],
   ['Angkor Wat', 'KH'], ['Stonehenge', 'GB'], ['Acropolis of Athens', 'GR', null, ['Acropolis', 'Parthenon']], ['Leaning Tower of Pisa', 'IT'],
