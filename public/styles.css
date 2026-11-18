@@ -663,4 +663,3 @@ body.special #modeNav, body.special .gear-wrap { display: none; }
 .board-list .nm small { color: var(--muted); font-weight: 600; }
 .board-list .sc { font-weight: 800; }
 .board-list .tm { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
-.link-btn { border: 0; background: none; padding: 0 0 0 6px; font: inherit; font-size: 13px; font-weight: 700; color: var(--accent); cursor: pointer; text-decoration: underline; }

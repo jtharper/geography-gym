@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611182201";
+const VERSION = "202611182306";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -1731,14 +1731,8 @@ function drawBoard(el, day, r, data) {
   const row = x => `<li class="${x.me ? "me" : ""}"><span class="rk">${x.rank}</span><span class="nm">${esc(x.name)}${x.me ? " <small>(you)</small>" : ""}</span><span class="sc">${x.s}/10</span><span class="tm">${fmtTime(x.t)}</span></li>`;
   const me = data.me, inTop = data.top.some(x => x.me);
   el.innerHTML = `<h2>Today's leaderboard</h2>
-    ${me ? `<p class="board-me">You're <b>#${me.rank}</b> of ${data.total} ${data.total === 1 ? "player" : "players"} today, as <b>${esc(me.name)}</b> <button type="button" class="link-btn" id="dRename">New name</button></p>` : ""}
-    <ol class="board-list">${data.top.map(row).join("")}${me && !inTop ? `<li class="gap" aria-hidden="true">…</li>${row({ ...me, me: true })}` : ""}</ol>
-    <p class="muted">Everyone gets a made-up name. The first try of the day counts; a new board starts at midnight.</p>`;
-  const rn = $("#dRename");
-  if (rn) rn.addEventListener("click", async () => {
-    rn.disabled = true; lsSet("geography-gym-board-name", randomBoardName());
-    try { drawBoard(el, day, r, await boardCall(day, { id: playerId(), name: boardName(), s: r.s, t: r.t, m: r.m })); } catch (e) { rn.disabled = false; }
-  });
+    ${me ? `<p class="board-me">You're <b>#${me.rank}</b> of ${data.total} ${data.total === 1 ? "player" : "players"} today, as <b>${esc(me.name)}</b></p>` : ""}
+    <ol class="board-list">${data.top.map(row).join("")}${me && !inTop ? `<li class="gap" aria-hidden="true">…</li>${row({ ...me, me: true })}` : ""}</ol>`;
 }
 const SPECIALS = [
   { id: "daily", name: "Daily challenge", view: daily },
