@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611181911";
+const VERSION = "202611182045";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -372,7 +372,7 @@ if (settings.sound) try { loadSounds(); } catch (e) {}
 
 /* ---------- popovers: topic menu + settings panel ---------- */
 const menu = $("#menu"), menuBtn = $("#menuBtn"), setPanel = $("#setPanel"), setBtn = $("#setBtn");
-const POPS = [[menuBtn, menu], [setBtn, setPanel]];
+const POPS = [[menuBtn, menu], [setBtn, setPanel], [$("#mpBtn"), $("#mpPanel")]];
 const anyOpen = () => POPS.some(([, p]) => !p.hidden);
 function setPop(btn, open) {
   POPS.forEach(([b, p]) => { const o = b === btn && open; p.hidden = !o; b.setAttribute("aria-expanded", o); });
@@ -1633,6 +1633,7 @@ function specialMeter() {
   else set(`<b>${TOPICS.reduce((a, d) => a + Object.values(loadProgress(d.id).p).filter(r => r.s && r.b >= 3).length, 0)}</b> learned in all`, null);
 }
 function showSpecial(sp) {
+  if (special === "mp") mp.leave();
   ++routeToken; special = sp.id; leftTopic = true; specialCtl = null;
   document.body.classList.add("special");
   document.querySelectorAll(".view").forEach(s => s.hidden = s.id !== "view-special");
@@ -1644,6 +1645,279 @@ function showSpecial(sp) {
   syncTopicLinks(); specialMeter();
   sp.view.show();
 }
+
+/* ---------- MULTIPLAYER (#mp-CODE): live 1v1 ----------
+   A small Cloudflare Worker (multiplayer/ in the repo, at mp.geogym.party) holds each game: its code, the two players
+   and their progress. Both browsers build the same questions from the seed it hands out, so it never sees the questions.
+   The host picks the quiz and length in the Multiplayer menu; the other player joins with the 5-character code or link. */
+const MP_URL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? "ws://127.0.0.1:8787" : "wss://mp.geogym.party";
+const MP_NAME = "geography-gym-mp-name", MP_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const mpName = () => { try { return localStorage.getItem(MP_NAME) || ""; } catch (e) { return ""; } };
+const mpNewCode = () => [...crypto.getRandomValues(new Uint32Array(5))].map(x => MP_CHARS[x % MP_CHARS.length]).join("");
+const mpDef = id => TOPIC[id] || TOPIC.flags;
+const mpStyle = def => def.styles.includes("choice") ? "choice" : def.styles[0];
+const mpSession = (k, v) => { try { if (v === undefined) { const x = sessionStorage.getItem(k); sessionStorage.removeItem(k); return x && JSON.parse(x); } sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } };
+// The game's questions: the same on both screens (seeded), never the same answer twice, like Quiz
+async function mpQuestions(cfg, seed) {
+  const def = mpDef(cfg.topic), style = mpStyle(def);
+  const t = (await prepTopics([def], () => ({ region: "All", terr: false, style })))[def.id];
+  const real = Math.random, prevT = T;
+  Math.random = seeded(seed); T = t;
+  try {
+    const P = pool().sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+    if (def.kind === "compare") {
+      const left = shuffle(P), qs = [];
+      while (qs.length < cfg.len && left.length >= 2) { const a = left.shift(), b = compareOpponent(a, left) || left[0]; left.splice(left.indexOf(b), 1); qs.push(makeCompare(a, b)); }
+      return { t, qs };
+    }
+    const seen = new Set(), its = [];
+    for (const it of shuffle(P)) {
+      let k = it.id;
+      if (def.kind === "flag" && TWINS[it.id]) k = [it.id, TWINS[it.id]].sort().join("+");
+      else if (!def.repeatAnswers && (def.kind === "fact" || def.kind === "text")) k = def.multi ? it.vals.map(norm).sort().join("+") : norm(it.ans);
+      if (seen.has(k)) continue;
+      seen.add(k); its.push(it);
+      if (its.length >= cfg.len) break;
+    }
+    return { t, qs: its.map(it => makeQuestion(it, style)) };
+  } finally { Math.random = real; T = prevT; }
+}
+const MP_ERRORS = {
+  nogame: ["No game with that code", "Check the code with your friend. Games end when the person who made them leaves."],
+  full: ["That game is full", "Two people are already playing with that code."],
+  started: ["That game already started", "Ask your friend for a rematch, or make a new game."],
+  version: ["Refresh to join", "Your friend has a newer version of GeoGym. Refresh this page, then join again."],
+  hostleft: ["The game ended", "The person who made this game left."],
+  server: ["Couldn't reach the game server", "Check your connection and try again in a moment."],
+  lost: ["Connection lost", "The connection to the game dropped."]
+};
+const mp = (() => {
+  let ws = null, code = null, me = null, room = null, game = null, opp = null, timer = null, token = 0, rematchAsked = false;
+  const host = () => sHost();
+  const send = msg => { try { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); } catch (e) {} };
+  const other = () => room && room.players.find(p => p.id !== me);
+  const otherName = () => (other() || opp || {}).name || "Your opponent";
+  const stopTimer = () => { if (timer) clearInterval(timer); timer = null; };
+  const link = () => `${location.origin}/#mp-${code}`;
+  function leave() {
+    token++; stopTimer(); specialCtl = null; game = null; room = null; opp = null; rematchAsked = false;
+    const s = ws; ws = null; code = null;
+    if (s) try { s.close(1000, "bye"); } catch (e) {}
+  }
+  function connect(c, cfg) {
+    leave(); code = c;
+    host().innerHTML = loadingCard(cfg ? "Creating your game…" : "Joining…");
+    const q = new URLSearchParams({ name: mpName(), v: VERSION });
+    if (cfg) { q.set("host", "1"); q.set("topic", cfg.topic); q.set("len", cfg.len); }
+    let s; try { s = new WebSocket(`${MP_URL}/room/${c}?${q}`); } catch (e) { return fail("server"); }
+    ws = s; let opened = false, refused = false;
+    s.onopen = () => { opened = true; };
+    s.onmessage = e => {
+      if (s !== ws) return;
+      let m; try { m = JSON.parse(e.data); } catch (err) { return; }
+      if (m.t === "error") {
+        refused = true; ws = null;
+        if (m.code === "taken" && cfg) { const nc = mpNewCode(); mpSession("geography-gym-mp-create", { ...cfg, code: nc }); location.replace(`#mp-${nc}`); return; }
+        return fail(m.code);
+      }
+      onMsg(m);
+    };
+    s.onclose = () => {
+      if (s !== ws || refused) return;
+      ws = null;
+      if (!opened) return fail("server");
+      if (game && !game.done) { game.lost = true; drawOpp(); return; }
+      if (game && game.done && !game.over) { game.lost = true; waiting(); return; }
+      if (!game) fail("lost");
+    };
+  }
+  function onMsg(m) {
+    if (m.t === "state") {
+      room = m; me = m.you;
+      // Someone new joined after the last game (the old opponent had left): back to the lobby
+      if (game && game.over && other() && opp && other().id !== opp.id) game = null;
+      if (!game) lobby(); else if (game.over) results();
+      return;
+    }
+    if (m.t === "start") return begin(m);
+    if (m.t === "opp" && opp) { opp.i = m.i; opp.right = m.right; return drawOpp(); }
+    if (m.t === "oppdone" && opp) { Object.assign(opp, { i: game ? game.qs.length : opp.i, right: m.right, ms: m.ms, done: true }); drawOpp(); if (game && game.done) waiting(); return; }
+    if (m.t === "over") { if (game) { game.over = true; game.res = m.results; results(); } return; }
+    if (m.t === "rematch") { if (game && game.over) { game.oppRematch = true; results(); } return; }
+    if (m.t === "left") {
+      if (room) room.players = room.players.filter(p => p.id !== m.id);
+      if (opp) opp.left = true;
+      if (game && !game.over) { if (game.done) waiting(); else drawOpp(); return; }
+      if (game && game.over) { game.oppGone = true; return results(); }
+      if (m.host) { leave(); return fail("hostleft"); }
+      return lobby(`${m.name} left. Waiting for someone else to join…`);
+    }
+  }
+  const pcard = (p, tag) => `<div class="mp-player"><b>${esc(p.name)}</b><small>${tag}</small></div>`;
+  function lobby(note = "") {
+    if (!room) return;
+    game = null; stopTimer(); specialCtl = null;
+    const def = mpDef(room.cfg.topic), mine = room.players.find(p => p.id === me), them = other(), amHost = room.host === me;
+    const hostP = room.players.find(p => p.host);
+    host().innerHTML = `<div class="setup mp-page">
+      <h1>${esc(def.name)}</h1>
+      <p class="mp-sub">${room.cfg.len} questions · same ones for both of you · most right wins, fastest breaks a tie</p>
+      ${amHost ? `<p class="mp-sub">Send your friend this code or the link:</p>` : ""}
+      <div class="mp-code" aria-label="Game code">${esc(code)}</div>
+      <div class="mp-row"><button class="btn" type="button" id="mpCopy">Copy link</button>${navigator.share ? `<button class="btn" type="button" id="mpShare">Share</button>` : ""}</div>
+      <div class="mp-players">${mine ? pcard(mine, amHost ? "You · made the game" : "You") : ""}${them ? pcard(them, them.host ? "Made the game" : "Joined") : `<div class="mp-player empty"><b>Waiting…</b><small>for a friend to join</small></div>`}</div>
+      ${amHost ? `<button class="btn primary" type="button" id="mpStart"${them ? "" : " disabled"}>${them ? "Start the game" : "Start (waiting for a friend)"}</button>` : `<p class="mp-note">Waiting for ${esc(hostP ? hostP.name : "the host")} to start…</p>`}
+      ${note ? `<p class="mp-note">${esc(note)}</p>` : ""}
+      <button class="btn" type="button" id="mpLeave">Leave</button>
+    </div>`;
+    $("#mpCopy").addEventListener("click", e => mpCopy(link(), e.currentTarget, "Copy link"));
+    const sh = $("#mpShare"); if (sh) sh.addEventListener("click", () => navigator.share({ title: "GeoGym", text: `Play me in ${def.name} on GeoGym! Code ${code}`, url: link() }).catch(() => {}));
+    const st = $("#mpStart"); if (st) st.addEventListener("click", () => { st.disabled = true; st.textContent = "Starting…"; send({ t: "start" }); });
+    $("#mpLeave").addEventListener("click", goHome);
+  }
+  async function begin(m) {
+    const my = ++token; stopTimer(); specialCtl = null; rematchAsked = false;
+    if (room) { room.status = "playing"; room.cfg = m.cfg; }
+    const them = other();
+    opp = { id: them && them.id, name: them ? them.name : "Your opponent", i: 0, right: 0, done: false, left: false };
+    const built = mpQuestions(m.cfg, m.seed).catch(() => null);
+    built.then(b => { if (b) preloadPhotos(b.qs.map(q => q.it)); });
+    const startAt = Date.now() + (m.inMs || 3000);
+    const draw = () => { const s = Math.ceil((startAt - Date.now()) / 1000); host().innerHTML = `<div class="setup mp-page"><p class="mp-sub">${esc(mpDef(m.cfg.topic).name)} vs ${esc(opp.name)}</p><div class="mp-count">${Math.max(1, s)}</div><p class="mp-sub">Get ready…</p></div>`; };
+    draw(); timer = setInterval(draw, 200);
+    const b = await built;
+    await new Promise(r => setTimeout(r, Math.max(0, startAt - Date.now())));
+    if (my !== token) return;
+    stopTimer();
+    if (!b || !b.qs.length) { host().innerHTML = loadingCard("This quiz didn't load. Check your connection and refresh the page."); return; }
+    game = { ...b, cfg: m.cfg, i: 0, right: 0, marks: [], t0: Date.now(), done: false, over: false };
+    timer = setInterval(() => { const el = $("#qTime"); if (el && game && !game.done) el.textContent = fmtTenths((Date.now() - game.t0) / 1000); }, 100);
+    ask();
+  }
+  const oppHTML = () => {
+    if (!opp || !game) return "";
+    const n = game.qs.length, status = game.lost ? "connection lost, finish for practice" : opp.left ? "left the game" : opp.done ? `finished · ${opp.right} right` : `${opp.i} / ${n} · ${opp.right} right`;
+    return `<b>${esc(opp.name)}</b><span class="qtrack"><span style="width:${100 * (opp.done ? n : opp.i) / n}%"></span></span><span>${status}</span>`;
+  };
+  function drawOpp() { const el = $("#mpOpp"); if (el) el.innerHTML = oppHTML(); }
+  function ask() {
+    const g = game; if (!g || special !== "mp") return;
+    if (g.i >= g.qs.length) return finish();
+    const q = g.qs[g.i], n = g.qs.length; T = g.t;
+    specialCtl = renderQuestion(host(), q, {
+      top: `<div class="mp-opp" id="mpOpp">${oppHTML()}</div><div class="qtop"><span>${g.i + 1} / ${n}</span><span class="qtrack"><span style="width:${100 * g.i / n}%"></span></span><span id="qTime">${fmtTenths((Date.now() - g.t0) / 1000)}</span></div>`,
+      below: `${g.right} right so far`, fast: true, nextLabel: g.i === n - 1 ? "Finish" : "Next",
+      onAnswer(ok) {
+        if (!q.compare) grade(q.it.id, ok);
+        if (ok) g.right++; g.marks.push(ok); g.i++;
+        send({ t: "progress", i: g.i, right: g.right });
+        const tr = host().querySelector(".qtop .qtrack span"); if (tr) tr.style.width = (100 * g.i / n) + "%";
+      },
+      onNext: ask
+    });
+  }
+  function finish() {
+    const g = game; g.done = true; g.ms = Date.now() - g.t0; stopTimer(); specialCtl = null;
+    send({ t: "done", right: g.right, ms: g.ms });
+    waiting();
+  }
+  function waiting() {
+    const g = game; if (!g || g.over) return;
+    const n = g.qs.length;
+    const msg = g.lost ? "The connection to the game dropped, so this round can't be compared."
+      : opp.left ? `${opp.name} left the game.` : opp.done ? "Comparing scores…" : `Waiting for ${opp.name} to finish…`;
+    host().innerHTML = `<div class="setup mp-page"><p class="mp-sub">You finished</p><div class="score">${g.right}<small> / ${n}</small></div><p class="mp-sub">in ${fmtTenths(g.ms / 1000)}</p>
+      <div class="mp-opp" id="mpOpp">${oppHTML()}</div><p class="mp-note">${esc(msg)}</p>
+      ${g.lost ? `<div class="mp-row"><button class="btn primary" type="button" id="mpNew">New game</button><button class="btn" type="button" id="mpLeave">Leave</button></div>` : ""}</div>`;
+    const nb = $("#mpNew"); if (nb) nb.addEventListener("click", openPanel);
+    const lb = $("#mpLeave"); if (lb) lb.addEventListener("click", goHome);
+  }
+  function results() {
+    const g = game; if (!g || !g.res) return;
+    const n = g.qs.length, o = g.res[opp.id] || {}, mine = { right: g.right, ms: g.ms };
+    const oppDone = o.done && !(o.left && !o.done);
+    let head;
+    if (!oppDone) head = `${opp.name} left, so you win`;
+    else if (mine.right !== o.right) head = mine.right > o.right ? "You win!" : `${opp.name} wins`;
+    else if (mine.ms !== o.ms) head = mine.ms < o.ms ? "You win on time!" : `${opp.name} wins on time`;
+    else head = "It's a tie!";
+    const iWin = !oppDone || mine.right > o.right || (mine.right === o.right && mine.ms < o.ms);
+    const theyWin = oppDone && !iWin && !(mine.right === o.right && mine.ms === o.ms);
+    const card = (name, r, win, sub) => `<div class="mp-player${win ? " win" : ""}"><small>${esc(name)}</small><span class="big">${r == null ? "–" : r}<small> / ${n}</small></span><small>${sub}</small></div>`;
+    const canRematch = !g.oppGone && !opp.left && ws;
+    host().innerHTML = `<div class="setup mp-page">
+      <h1>${esc(head)}</h1>
+      <div class="mp-players">${card("You", mine.right, iWin, fmtTenths(mine.ms / 1000))}${card(opp.name, oppDone ? o.right : null, theyWin, oppDone ? fmtTenths(o.ms / 1000) : "left the game")}</div>
+      ${canRematch ? `<button class="btn primary" type="button" id="mpRematch"${rematchAsked ? " disabled" : ""}>${rematchAsked ? `Waiting for ${esc(opp.name)}…` : g.oppRematch ? `${esc(opp.name)} wants a rematch! Play again` : "Rematch"}</button>` : `<p class="mp-note">${esc(opp.name)} left the game.</p>`}
+      <div class="mp-row"><button class="btn" type="button" id="mpNew">New game</button><button class="btn" type="button" id="mpLeave">Leave</button></div>
+    </div>${resultList(g.qs.map(q => ({ t: g.t, q })), g.marks)}`;
+    const rb = $("#mpRematch"); if (rb) rb.addEventListener("click", () => { rematchAsked = true; send({ t: "rematch" }); results(); });
+    $("#mpNew").addEventListener("click", openPanel);
+    $("#mpLeave").addEventListener("click", goHome);
+  }
+  function fail(kind) {
+    stopTimer(); specialCtl = null; game = null;
+    const [title, text] = MP_ERRORS[kind] || MP_ERRORS.server;
+    host().innerHTML = `<div class="setup mp-page"><h1>${esc(title)}</h1><p class="mp-sub">${esc(text)}</p>
+      <div class="mp-row">${kind === "server" || kind === "lost" ? `<button class="btn primary" type="button" id="mpRetry">Try again</button>` : ""}<button class="btn${kind === "server" || kind === "lost" ? "" : " primary"}" type="button" id="mpNew">New game</button><button class="btn" type="button" id="mpLeave">Back to practice</button></div></div>`;
+    const c = code, rt = $("#mpRetry"); if (rt) rt.addEventListener("click", () => connect(c));
+    $("#mpNew").addEventListener("click", openPanel);
+    $("#mpLeave").addEventListener("click", goHome);
+  }
+  // Someone opened a link: ask for a name first
+  function joinScreen(c) {
+    leave(); code = c;
+    host().innerHTML = `<div class="setup mp-page"><h1>Join a GeoGym game</h1><p class="mp-sub">A friend invited you to a live 1v1. You'll both get the same questions; most right wins.</p>
+      <div class="mp-code">${esc(c)}</div>
+      <form class="mp-page" id="mpJoinForm" autocomplete="off"><input class="mp-name" id="mpJoinName" maxlength="20" placeholder="Your name" aria-label="Your name" value="${esc(mpName())}"><button class="btn primary" type="submit">Join the game</button></form></div>`;
+    $("#mpJoinForm").addEventListener("submit", e => { e.preventDefault(); saveMpName($("#mpJoinName").value); connect(c); });
+  }
+  return {
+    enter(c) {
+      const made = mpSession("geography-gym-mp-create"), joining = mpSession("geography-gym-mp-join");
+      if (made && made.code === c) return connect(c, { topic: made.topic, len: made.len });
+      if (ws && code === c) return;
+      if (joining === c) return connect(c);
+      joinScreen(c);
+    },
+    leave
+  };
+})();
+function saveMpName(v) { try { localStorage.setItem(MP_NAME, String(v || "").trim().slice(0, 20)); } catch (e) {} }
+function mpCopy(text, btn, label) {
+  const done = () => { btn.textContent = "Copied"; setTimeout(() => { btn.textContent = label; }, 1600); };
+  (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(done, () => {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch (e) {} ta.remove(); done();
+  });
+}
+function goHome() { mp.leave(); location.hash = `#${settings.topic}-practice`; }
+function showMultiplayer(c) {
+  showSpecial({ id: "mp", name: "Multiplayer", view: { show() { mp.enter(c); } } });
+}
+// The Multiplayer menu in the header
+function renderMpPanel() {
+  $("#mpName").value = mpName();
+  const cur = (T && T.def.id) || settings.topic, groups = [...new Set(TOPICS.map(t => t.group))];
+  $("#mpTopic").innerHTML = groups.map(g => `<optgroup label="${esc(g)}">${TOPICS.filter(t => t.group === g).map(t => `<option value="${t.id}"${t.id === cur ? " selected" : ""}>${esc(t.name)}</option>`).join("")}</optgroup>`).join("");
+  $("#mpErr").hidden = true; $("#mpCode").value = "";
+}
+function openPanel() { renderMpPanel(); setPop($("#mpBtn"), true); $("#mpBtn").focus({ preventScroll: true }); }
+$("#mpBtn").addEventListener("click", () => { if (!$("#mpPanel").hidden) renderMpPanel(); });
+$("#mpName").addEventListener("input", e => saveMpName(e.target.value));
+$("#mpLen").addEventListener("click", e => { const b = e.target.closest("[data-len]"); if (b) $("#mpLen").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); });
+$("#mpCreate").addEventListener("click", () => {
+  const len = +($("#mpLen").querySelector("[aria-pressed=true]") || {}).dataset.len || 10, c = mpNewCode();
+  mpSession("geography-gym-mp-create", { code: c, topic: $("#mpTopic").value, len });
+  setPop(null, false); location.hash = `#mp-${c}`;
+});
+$("#mpJoin").addEventListener("submit", e => {
+  e.preventDefault();
+  const c = $("#mpCode").value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!/^[A-Z2-9]{5}$/.test(c)) { $("#mpErr").textContent = "Codes are 5 letters and numbers, like K7M2Q."; $("#mpErr").hidden = false; return; }
+  mpSession("geography-gym-mp-join", c);
+  setPop(null, false);
+  if (location.hash === `#mp-${c}`) mp.enter(c); else location.hash = `#mp-${c}`;
+});
 
 const VIEWS = { practice, quiz, "name-all": nameAll, browse, special: { show() {}, key(e) { specialCtl && specialCtl.key(e); } } };
 const state = { view: "practice" };
@@ -1677,6 +1951,9 @@ const needsMap = def => def.kind === "shape" || def.kind === "locate" || def.kin
 let routeToken = 0;
 async function route() {
   document.body.classList.remove("fit");
+  const mpm = location.hash.match(/^#mp-([A-Za-z0-9]{5})$/);
+  if (mpm) return showMultiplayer(mpm[1].toUpperCase());
+  if (special === "mp") mp.leave();
   const sp = SPECIALS.find(x => x.id === location.hash.slice(1));
   if (sp) return showSpecial(sp);
   if (special) { special = null; specialCtl = null; document.body.classList.remove("special"); }

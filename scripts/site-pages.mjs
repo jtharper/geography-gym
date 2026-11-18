@@ -16,6 +16,7 @@ export function aboutBody({ topics }) {
   <li><b>Name them</b> asks you to type every answer you can remember.</li>
   <li><b>Browse</b> is a reference list you can search.</li>
   <li>The <a href="/daily/">Daily Challenge</a> has 10 questions, the same for everyone each day, so you can compare scores with friends.</li>
+  <li><b>Multiplayer</b> lets you race a friend live: make a game, send them the code, and you both answer the same questions at the same time.</li>
 </ul>
 
 <h2>Free, no sign-up</h2>
@@ -48,13 +49,16 @@ export function privacyBody() {
 <p><i>Last updated: ${UPDATED}</i></p>
 
 <h2>What we don't collect</h2>
-<p>GeoGym has no accounts, logins or forms. We don't ask for your name, email address or any other personal information to play.</p>
+<p>GeoGym has no accounts, logins or forms. We don't ask for your email address or any other personal information to play. The only exception is the name you choose to type in for Multiplayer, described below.</p>
 
 <h2>Your progress stays on your device</h2>
 <p>Your progress, best times, Daily Challenge results and settings (like sounds and answer style) are saved in your browser's local storage, on your own device. They are not sent to us. To delete them, clear this site's data in your browser settings. This also resets your progress.</p>
 
 <h2>Hosting</h2>
 <p>GeoGym is hosted by Cloudflare. Like any website host, Cloudflare receives technical information when you visit, such as your IP address and browser type, to deliver the site and protect it from attacks. See <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Cloudflare's privacy policy</a>.</p>
+
+<h2>Multiplayer</h2>
+<p>When you play Multiplayer, your browser connects to our game server (run on Cloudflare) so both players can see each other's progress. The server receives the name you type in (it can be anything; you don't have to use your real name), the game code, which quiz you picked, and your progress and score in that game. Your opponent sees your name and score. This information is used only to run the game and is deleted about an hour after both players leave. Your name is also saved in your browser so you don't have to type it again.</p>
 
 <h2>Photos from Wikipedia</h2>
 <p>Photos of capitals and landmarks are loaded directly from Wikipedia (Wikimedia Foundation) by your browser, so Wikimedia receives the request, including your IP address. See the <a href="https://foundation.wikimedia.org/wiki/Policy:Privacy_policy" rel="noopener">Wikimedia privacy policy</a>.</p>

@@ -60,6 +60,10 @@ Each topic keeps its own progress. To add a topic, add an entry to `TOPICS` at t
 
 ## Pages for search engines and link previews
 
+**Multiplayer** (live 1v1): the Multiplayer button in the header opens a menu to make a game (pick a quiz and 10 or 20 questions) or join one with a 5-character code. The game page is `#mp-CODE`, so a link like `geogym.party/#mp-K7M2Q` opens the join screen. Both players get the same questions (built in the browser from a seed the server hands out), see each other's progress live, and get a result screen with a rematch button. Most right wins; the faster time breaks a tie.
+
+The server is a small Cloudflare Worker in `multiplayer/` (one Durable Object per game code, WebSockets with hibernation), served at `wss://mp.geogym.party`. It's deployed separately from the site with Cloudflare Workers Builds (root directory `multiplayer`, deploy command `npx wrangler deploy`). To run it locally: `cd multiplayer && npm install && npm run dev` (port 8787); the site uses `ws://127.0.0.1:8787` automatically when opened on localhost.
+
 **About, Privacy and Contact** pages (`/about/`, `/privacy/`, `/contact/`, written in `scripts/site-pages.mjs`) are linked from a small footer under the game and on every generated page. Contact email: support@geogym.party. Keep the privacy policy in step with the site: if ads, analytics or anything else that collects data changes, update it and its date.
 
 The game itself is one page (`index.html`). So that each quiz can be found on Google and looks good when shared, `scripts/build-pages.mjs` also builds:

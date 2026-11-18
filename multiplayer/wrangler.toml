@@ -1,0 +1,15 @@
+# GeoGym live 1v1 server: one Durable Object ("Room") per game code, talking to both players over WebSockets.
+# Deployed separately from the site (Cloudflare Workers Builds, root directory "multiplayer"). See README.md.
+name = "geogym-multiplayer"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+workers_dev = true
+routes = [{ pattern = "mp.geogym.party", custom_domain = true }]
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
