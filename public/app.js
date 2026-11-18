@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611181858";
+const VERSION = "202611181909";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -985,6 +985,12 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
       const thumb = T.img[it.id] && q.style !== "reverse" && ["flag", "fact", "neighbors"].includes(def.kind) ? `<div class="map-thumb">${img(it.id, "")}</div>` : "";
       const mapFig = `<figure class="map" data-map>${MAP_CONTROLS}${thumb}<figcaption class="map-key">${keyHTML}</figcaption></figure>`;
       const photo = hasPhoto(def);
+      // Landmarks (owner's request): no map, just the photo with where it is
+      if (def.photoQ && it.photo) {
+        fbEl.innerHTML = resultRow + `<figure class="solo-photo loading"><img alt="${esc(it.label)}" src="${esc(it.photo.src)}"><figcaption><b>${esc(it.label)}</b> <span class="where">is in ${esc(it.row.ans)}</span> <a target="_blank" rel="noopener" href="${esc(it.photo.page)}">Wikipedia</a></figcaption></figure>`;
+        const fig = fbEl.querySelector(".solo-photo"), im = fig.querySelector("img"), done = () => fig.classList.remove("loading");
+        if (im.complete && im.naturalWidth) done(); else { im.onload = done; im.onerror = done; }
+      } else {
       fbEl.innerHTML = resultRow + (photo ? `<div class="media">${mapFig}<figure class="cap-photo loading"><img alt="${esc(it.cap || it.label)}"><figcaption><b>${esc(it.cap || it.label)}</b><a target="_blank" rel="noopener">Wikipedia</a></figcaption></figure></div>` : mapFig) + tip;
       if (photo) {
         const fig = fbEl.querySelector(".cap-photo"), im = fig.querySelector("img");
@@ -1002,6 +1008,7 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
         const ids = def.kind === "neighbors" ? [it.id, ...it.nb, ...marks.miss] : [...marks.hit, ...(marks.hit2 || []), ...marks.miss];
         c.focus(ids);
       });
+      }
     }
     stack.classList.add("answered");
     onAnswer(ok, picked);
