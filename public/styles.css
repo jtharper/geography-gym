@@ -148,6 +148,18 @@ main { flex: 1; display: flex; flex-direction: column; align-items: center; padd
 .answer.right { border-color: var(--good); background: var(--good-bg); color: var(--good); }
 .answer.wrong { border-color: var(--bad); background: var(--bad-bg); color: var(--bad); }
 .answer.dim { opacity: .45; }
+.answers [hidden], .flag-answers [hidden] { display: none !important; }
+.q-stack.answered .answers, .q-stack.answered .flag-answers { display: flex; justify-content: center; }
+.q-stack.answered .answers .answer { flex: 0 1 260px; min-width: 0; }
+.q-stack.answered .flag-answers .flag-answer { flex: 0 1 200px; min-width: 0; }
+.result-sub:empty { display: none; }
+/* Landmark photo in the question */
+.qphoto { position: relative; margin: 0 0 14px; width: min(100%, 520px); aspect-ratio: 3 / 2; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--track); box-shadow: var(--flag-shadow); }
+.qphoto img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.qphoto.loading img { opacity: 0; }
+.qphoto.loading::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .25), transparent); animation: shimmer 1.2s infinite; }
+.qphoto.broken img { display: none; }
+.q-head.with-photo .qtext { font-size: clamp(24px, 4.2vh, 38px); padding: 10px 26px; }
 .flag-answers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; width: 100%; margin-top: 20px; }
 .flag-answer { border: 2px solid transparent; background: none; padding: 6px; border-radius: 14px; display: grid; gap: 6px; }
 .flag-answer:hover:not(:disabled) { border-color: var(--line); }
@@ -282,6 +294,9 @@ a.btn.primary { color: var(--bg); }
   .q-stack.answered .map { aspect-ratio: auto; flex: 1 1 0; min-height: 160px; }
   .q-stack.answered .flag-answers .flag { max-height: calc(14vh); object-fit: contain; }
   .qtext { padding: 32px 56px; }
+  .qphoto { width: auto; height: min(300px, calc(100vh - 500px)); min-height: 140px; }
+  .qphoto.big { height: min(400px, calc(100vh - 380px)); min-height: 180px; }
+  .q-head.with-photo .qtext { padding: 10px 28px; }
   .q-stack.answered .qtext { font-size: 28px; padding: 10px 24px; }
   .qshape { width: min(440px, calc((100vh - 360px) * 4 / 3)); }
   .q-stack.answered .qshape { width: min(150px, calc(12vh * 4 / 3)); padding: 4px; }

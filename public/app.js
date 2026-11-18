@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611181726";
+const VERSION = "202611181741";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -53,8 +53,10 @@ const TOPICS = [
     styles: ["choice", "type"], ask: "Which continent is it in?", typeHolder: "Type the continent", modes: PQB, mapPick: false },
   { id: "driving", group: "Trivia", name: "Driving side", unit: "countries", set: "countries", kind: "fact", field: "drive", regions: WORLD_REGIONS, terr: true, repeatAnswers: true,
     styles: ["choice"], ask: "Which side of the road do they drive on?", modes: PQB, mapPick: false },
-  { id: "landmarks", group: "Trivia", name: "Famous landmarks", unit: "landmarks", set: "trivia", kind: "text", field: "n", types: ["landmark"], photos: true, regions: WORLD_REGIONS, terr: false,
+  { id: "landmarks", group: "Trivia", name: "Famous landmarks", unit: "landmarks", set: "trivia", kind: "text", field: "n", types: ["landmark"], photos: true, photoQ: true, regions: WORLD_REGIONS, terr: false,
     styles: ["choice", "type"], ask: "Which country is it in?", typeHolder: "Type the country", modes: PQB },
+  { id: "landmark-photos", group: "Trivia", name: "Landmark photos", unit: "landmarks", set: "trivia", kind: "text", field: "n", types: ["landmark"], photos: true, photoQ: true, photoOnly: true, regions: WORLD_REGIONS, terr: false,
+    styles: ["choice", "type"], ask: "What is this landmark?", typeHolder: "Type the landmark", modes: PQB },
   { id: "former", group: "Trivia", name: "Former names", unit: "former names", set: "trivia", kind: "text", field: "n", types: ["former-country", "former-city"], regions: WORLD_REGIONS, terr: false,
     styles: ["choice", "type"], ask: "What's it called now?", typeHolder: "Type today's name", modes: PQB },
 
@@ -249,7 +251,10 @@ function buildTopic(def) {
         if (def.set === "trivia") {
           const city = r.t === "former-city", lm = r.t === "landmark";
           const fact = lm ? `${r.n} is in ${r.ans} · ${where(r)}` : `${r.n} is now ${r.ans}${r.y ? `, renamed in ${r.y}` : ""} · ${city ? countryName(r.cc) : where(r)}`;
-          return { ...base, cap: null, q: r.n, ans: r.ans, alts: r.a || [], mid: r.cc, fact,
+          const photo = def.photoQ && lmPhotos && lmPhotos[r.wiki] || null;
+          // Landmark photos: the photo is the question and the landmark's name is the answer
+          if (def.photoOnly) return { ...base, cap: null, q: r.n, ans: r.n, alts: [], mid: r.cc, fact, photo, ask: null };
+          return { ...base, cap: null, q: r.n, ans: r.ans, alts: r.a || [], mid: r.cc, fact, photo,
             ask: lm ? null : city ? "What's this city called now?" : "What's this country called now?" };
         }
         const q = def.field === "code" ? r.c : r[def.field];
@@ -786,7 +791,44 @@ const WIKI_TITLE = {
 const COUNTRY_OF_SET = { states: "United States", ca: "Canada", au: "Australia", de: "Germany", mx: "Mexico" };
 const hasPhoto = def => def.photos || (def.field === "cap" && (def.kind === "fact" || def.kind === "text"));
 function savePhotos() { try { localStorage.setItem(PHOTO_KEY, JSON.stringify(photoCache)); } catch (e) {} }
+// Landmark photos for the question itself: every landmark's lead Wikipedia image, fetched in one or two requests
+// (50 titles each) and kept for 30 days, so questions show their photo straight away.
+const LM_KEY = "geography-gym-lmphotos-v1";
+let lmPhotos = null, lmLoading = null;
+function loadLandmarkPhotos() {
+  if (lmPhotos) return Promise.resolve(lmPhotos);
+  const titles = [...new Set(SETS.trivia.rows.filter(r => r.wiki).map(r => r.wiki))];
+  try {
+    const c = JSON.parse(localStorage.getItem(LM_KEY));
+    if (c && Date.now() - c.t < 30 * 864e5 && titles.every(t => t in c.m)) return Promise.resolve(lmPhotos = c.m);
+  } catch (e) {}
+  if (!lmLoading) {
+    const chunks = []; for (let i = 0; i < titles.length; i += 50) chunks.push(titles.slice(i, i + 50));
+    lmLoading = Promise.all(chunks.map(async ch => {
+      const r = await fetch("https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=640&pilimit=50&titles=" + encodeURIComponent(ch.join("|")));
+      if (!r.ok) throw new Error("wiki");
+      const q = (await r.json()).query || {}, out = {};
+      const norm1 = new Map((q.normalized || []).map(x => [x.from, x.to])), redir = new Map((q.redirects || []).map(x => [x.from, x.to]));
+      const pages = new Map((q.pages || []).map(pg => [pg.title, pg]));
+      ch.forEach(t => {
+        let f = norm1.get(t) || t; f = redir.get(f) || f;
+        const pg = pages.get(f);
+        out[t] = pg && pg.thumbnail ? { src: pg.thumbnail.source, page: "https://en.wikipedia.org/wiki/" + encodeURIComponent(f.replace(/ /g, "_")) } : null;
+      });
+      return out;
+    })).then(parts => {
+      lmPhotos = Object.assign({}, ...parts);
+      try { localStorage.setItem(LM_KEY, JSON.stringify({ t: Date.now(), m: lmPhotos })); } catch (e) {}
+      return lmPhotos;
+    }).catch(() => { lmLoading = null; return null; });
+  }
+  return lmLoading;
+}
+// Waits for the photos, but never more than ms (a slow connection falls back to names only)
+const landmarkPhotos = (ms = 5000) => Promise.race([loadLandmarkPhotos(), new Promise(res => setTimeout(res, ms))]);
+const preloadPhotos = items => items.forEach(it => { if (it && it.photo) new Image().src = it.photo.src; });
 async function capitalPhoto(it, def) {
+  if (it.photo) return it.photo;
   if (def.set === "trivia") return wikiPhoto("lm|" + it.row.wiki, [it.row.wiki], null);
   const cap = it.cap, place = it.row.n, key = cap + "|" + place;
   if (key in photoCache) return photoCache[key];
@@ -833,7 +875,13 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
     if (def.kind === "flag") h += `<div class="q-head"><div class="qflag">${img(it.id, "Mystery flag")}</div><p class="prompt">${esc(def.ask)}</p></div>`;
     else if (def.kind === "feature") h += `<div class="q-head"><p class="prompt">${esc(def.ask)}</p></div><figure class="map main" data-map>${MAP_CONTROLS}<figcaption class="map-key"><span>Scroll or use + and − to zoom</span></figcaption></figure>`;
     else if (def.kind === "shape") h += `<div class="q-head"><div class="qflag qshape">${shapeSVG(it.id)}</div><p class="prompt">${esc(def.ask)}</p></div>`;
-    else if (def.kind === "text") h += `<div class="q-head">${textTile(it.q)}<p class="prompt">${esc(it.ask || def.ask)}</p></div>`;
+    else if (def.kind === "text") {
+      // Landmarks: a photo above the name; "Landmark photos" shows only the photo (or a hint if photos didn't load)
+      const ph = it.photo ? `<figure class="qphoto loading${def.photoOnly ? " big" : ""}"><img src="${esc(it.photo.src)}" alt="${def.photoOnly ? "Mystery landmark" : esc(it.q)}"></figure>` : "";
+      const the = /^(United|Netherlands|Philippines|Czech|Dominican|Central African|Bahamas|Gambia|Maldives|Marshall|Solomon)/.test(it.row.ans) ? "the " : "";
+      const tile = def.photoOnly ? (it.photo ? "" : `<div class="qname">A landmark in ${the}${esc(it.row.ans)}</div>`) : textTile(it.q);
+      h += `<div class="q-head${ph && tile ? " with-photo" : ""}">${ph}${tile}<p class="prompt">${esc(it.ask || def.ask)}</p></div>`;
+    }
     else if (def.kind === "odd") h += `<div class="q-head"><div class="qname odd-q">${esc(def.ask)}</div></div>`;
     else h += `<div class="q-head"><div class="qflag small">${img(it.id, "Flag of " + it.label)}</div><div class="qname">${esc(it.label)}</div><p class="prompt">${esc(def.ask)}</p></div>`;
     if (q.style === "choice") {
@@ -846,6 +894,8 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
   host.innerHTML = h;
   document.body.classList.remove("fit");
   const stack = host.querySelector(".q-stack"), belowEl = host.querySelector(".below"), fbEl = host.querySelector(".fb");
+  const qph = host.querySelector(".qphoto");
+  if (qph) { const im = qph.querySelector("img"), done = () => qph.classList.remove("loading"); if (im.complete && im.naturalWidth) done(); else { im.onload = done; im.onerror = () => qph.classList.add("broken"); } }
 
   if (q.style === "map") {
     mountMap(host.querySelector("[data-map]"), { tips: false, dots: true, pick: code => { if (!answered) finish(q.ok.has(code), code, ""); } }).then(c => { mapCtl = c; });
@@ -877,6 +927,9 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
     }
     // Phones: the answered question fits one screen (question hidden, map fills the space; see body.fit in styles.css)
     stack.classList.add("answered"); document.body.classList.add("fit");
+    if (qph) qph.hidden = true; // the photo moves next to the map, with its name and a Wikipedia link
+    // Only the right answer (and a wrong pick) stay on screen; the other choices make room for the map
+    host.querySelectorAll(".answers .dim, .flag-answers .dim").forEach(b => { b.hidden = true; });
     const p = picked && !(ok && picked === it.id) ? picked : null;
     const pLabel = p && ((q.labels && q.labels[p]) || (def.set === "trivia" && T.byId[p] ? T.byId[p].ans : nameOf(p)));
     const mid = x => (T.byId[x] && T.byId[x].mid) || x; // trivia items show their country on the map
@@ -904,17 +957,13 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
       key = [[it.id, "hit", ""]].concat(p && !ok ? [[p, "miss", "your pick"]] : []);
     } else {
       line = ok ? `Correct, it's ${esc(it.ans)}.` : `It's ${esc(it.ans)}.${p ? ` You picked ${esc(pLabel)}.` : ""}`;
-      if (!ok && p && def.kind === "fact" && def.field === "cap" && T.byId[p]) sub += ` · ${esc(T.byId[p].ans)} is the capital of ${esc(T.byId[p].label)}`;
-      if (!ok && p && def.kind === "text" && T.byId[p]) {
-        const o = T.byId[p];
-        sub += ` · ${def.set === "trivia" ? (o.row.t === "landmark" ? `${esc(o.q)} is in ${esc(o.ans)}` : `${esc(o.q)} is now ${esc(o.ans)}`)
-          : def.field === "cap" ? `${esc(o.label)}'s capital is ${esc(o.q)}` : `${esc(o.q)} is ${esc(o.label)}`}`;
-      }
       const showPick = p && !ok && def.mapPick !== false && T.rowById[p] && mid(p) !== mid(it.id);
       marks = { hit: [mid(it.id)], miss: showPick ? [mid(p)] : [] };
       key = [[mid(it.id), "hit", ""]].concat(showPick ? [[mid(p), "miss", "your pick"]] : []);
     }
-    if (note && def.kind !== "neighbors") sub += ` · ${esc(note)}`;
+    // Owner's request: no fact line under the result ("Capital of Wyoming · West"); comparisons, neighbors and nature keep theirs
+    if (!q.compare && def.kind !== "neighbors" && def.kind !== "feature") sub = "";
+    if (note && def.kind !== "neighbors") sub += (sub ? " · " : "") + esc(note);
     let tip = "";
     if (!ok && (def.kind === "flag" || def.kind === "shape") && !q.compare) {
       const gs = def.groups ? (groupsOf[it.id] || []) : [];
@@ -1074,7 +1123,7 @@ const quiz = (() => {
     $("#qLen").addEventListener("click", e => { const b = e.target.closest("[data-len]"); if (b) { len = +b.dataset.len; setup(); } });
     $("#qStart").addEventListener("click", () => {
       if (isCompare) start(comparePairs(P, len));
-      else start(shuffle(P).slice(0, len).map(it => makeQuestion(it, T.pref.style)));
+      else { const qs = shuffle(P).slice(0, len).map(it => makeQuestion(it, T.pref.style)); preloadPhotos(qs.slice(0, 20).map(q => q.it)); start(qs); }
     });
   }
   // No repeats in a quiz: every place once, never the same answer twice, and only one of two identical flags
@@ -1301,6 +1350,7 @@ function seeded(a) { return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a 
 async function prepTopics(defs, prefFor) {
   await Promise.all([...new Set(defs.map(d => d.set))].map(loadSet));
   await Promise.all([...new Set(defs.filter(needsMap).map(d => d.set))].map(loadMap));
+  if (defs.some(d => d.photoQ)) await landmarkPhotos();
   const out = {};
   defs.forEach(def => { const t = buildTopic(def); t.pref = { ...t.pref, ...prefFor(def) }; out[def.id] = t; });
   return out;
@@ -1311,6 +1361,7 @@ function answerText(def, q) {
   const it = q.it;
   if (q.compare) return `${it.label} ${def.verb} than ${(q.a.id === it.id ? q.b : q.a).label}`;
   if (def.kind === "fact") return `${it.label}: ${it.ans}`;
+  if (def.photoOnly) return `${it.ans} (${it.row.ans})`;
   if (def.kind === "text") return `${it.q} → ${it.ans}`;
   if (def.kind === "neighbors") return `${it.label} borders ${listJoin(it.nb.map(nameOf).slice(0, 3))}${it.nb.length > 3 ? "…" : ""}`;
   return it.ans;
@@ -1607,7 +1658,7 @@ async function route() {
     leftTopic = false;
     document.querySelectorAll(".view").forEach(s => s.hidden = true);
     $("#loading").hidden = false; $("#loading").textContent = "Loading…";
-    try { await loadSet(def.set); if (needsMap(def)) await loadMap(def.set); }
+    try { await loadSet(def.set); if (needsMap(def)) await loadMap(def.set); if (def.photoQ) await landmarkPhotos(); }
     catch (e) { $("#loading").textContent = "This topic didn't load. Refresh the page to try again."; return; }
     if (token !== routeToken) return;
     settings.topic = topic; saveSettings();

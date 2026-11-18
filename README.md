@@ -24,7 +24,8 @@ Pick a topic from the menu at the top right. Topics are grouped into five tabs: 
 - **Demonyms**: what you call someone from each country (Comorian, Mosotho, Kittitian…).
 - **Which continent?** Countries on two continents (Russia, Turkey, Egypt…) accept both.
 - **Driving side**: left or right.
-- **Famous landmarks** (95): which country is it in? In Practice, a photo of the landmark appears after you answer.
+- **Famous landmarks** (95): a photo and the name of the landmark; which country is it in?
+- **Landmark photos** (95): just the photo; name the landmark.
 - **Former names** (67): Burma, Siam, Ceylon, Zaire… and cities like Bombay, Constantinople and Saigon, with the year they were renamed.
 
 **Nature**

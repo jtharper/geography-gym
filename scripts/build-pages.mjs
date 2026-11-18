@@ -25,7 +25,7 @@ const SLUG = {
   flags: 'flag-quiz', capitals: 'capitals-quiz', 'capitals-rev': 'capital-to-country-quiz', map: 'world-map-quiz', shapes: 'country-shapes-quiz',
   neighbors: 'neighboring-countries-quiz', area: 'country-size-quiz', population: 'population-quiz', landlocked: 'landlocked-countries-quiz',
   currencies: 'currency-quiz', languages: 'official-languages-quiz', domains: 'country-domains-quiz', phone: 'calling-codes-quiz',
-  demonyms: 'demonyms-quiz', continents: 'continents-quiz', driving: 'driving-side-quiz', landmarks: 'famous-landmarks-quiz', former: 'former-names-quiz',
+  demonyms: 'demonyms-quiz', continents: 'continents-quiz', driving: 'driving-side-quiz', landmarks: 'famous-landmarks-quiz', 'landmark-photos': 'landmark-photos-quiz', former: 'former-names-quiz',
   lakes: 'lakes-quiz', rivers: 'rivers-quiz', ranges: 'mountain-ranges-quiz', peaks: 'mountain-peaks-quiz', seas: 'seas-and-straits-quiz',
   'state-flags': 'us-state-flags-quiz', 'state-capitals': 'us-state-capitals-quiz', 'state-map': 'us-states-map-quiz', 'state-shapes': 'us-state-shapes-quiz',
   'state-abbr': 'us-state-abbreviations-quiz', 'state-nicknames': 'us-state-nicknames-quiz'
