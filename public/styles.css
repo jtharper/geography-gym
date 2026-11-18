@@ -96,10 +96,15 @@ h1, h2, h3 { margin: 0; line-height: 1.2; text-wrap: balance; }
 @media (hover: hover) { .menu-tabs button:hover { color: var(--ink); background: var(--bg); } }
 .menu-tabs button[aria-selected="true"] { background: var(--ink); color: var(--surface); }
 .menu-list [hidden] { display: none !important; }
-.menu-list[data-tab="Regions"] { grid-template-columns: 1fr 1fr; column-gap: 4px; }
-.menu-list[data-tab="Regions"] .menu-group { grid-column: 1 / -1; padding: 10px 12px 2px; }
-.menu-list[data-tab="Regions"] .menu-group:first-child { padding-top: 2px; }
-.menu-list[data-tab="Regions"] a { height: 34px; font-size: 14px; padding: 0 10px; }
+/* Regions tab: countries on the left, the hovered/tapped country's games on the right */
+.reg-pane { display: grid; grid-template-columns: 152px 1fr; gap: 6px; padding-top: 2px; }
+.reg-list { display: grid; gap: 2px; align-content: start; }
+.reg-list button { display: flex; align-items: center; justify-content: space-between; gap: 6px; height: 36px; padding: 0 8px 0 12px; border: 0; border-radius: 9px; background: none; font: inherit; font-weight: 600; font-size: 15px; color: var(--ink); text-align: left; white-space: nowrap; cursor: pointer; }
+.reg-list button svg { width: 14px; height: 14px; flex: none; fill: none; stroke: var(--muted); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.reg-list button[aria-selected="true"] { background: var(--bg); color: var(--accent); font-weight: 700; }
+.reg-list button[aria-selected="true"] svg { stroke: var(--accent); }
+.reg-games { border-left: 1px solid var(--line); padding-left: 6px; min-height: 100%; }
+.reg-set { display: grid; gap: 2px; }
 .menu-group { font-size: 12px; font-weight: 700; color: var(--muted); padding: 10px 12px 4px; }
 .menu-group:first-child { padding-top: 4px; }
 .menu-list { display: grid; gap: 2px; }

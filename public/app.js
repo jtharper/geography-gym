@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611182123";
+const VERSION = "202611182131";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -391,31 +391,44 @@ menu.addEventListener("click", e => { if (e.target.closest("a[href^='#']")) setP
 
 const CHECK = `<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
 // Topic menu: five tabs (World, Trivia, Nature, Regions, Daily), then that tab's topics.
-// Regions holds the US/Canada/Australia/Germany/Mexico groups, each under its own header.
-const GROUP_NAMES = [...new Set(TOPICS.map(t => t.group)), "Daily & stats"];
+// Regions (owner's request: "too much to look at"): a short list of countries on the left; hovering or tapping one
+// shows only that country's games on the right. It opens on the country of the topic you're playing.
+const GROUP_NAMES = [...new Set(TOPICS.map(t => t.group))];
 const MAIN_TABS = ["World", "Trivia", "Nature"], REGION_TAB = "Regions";
 const tabOf = g => MAIN_TABS.includes(g) ? g : REGION_TAB;
 const MENU_TABS = [...MAIN_TABS, REGION_TAB, "Daily"];
-let menuGroup = MENU_TABS[0];
+const REGIONS = GROUP_NAMES.filter(g => tabOf(g) === REGION_TAB);
+let menuGroup = MENU_TABS[0], menuRegion = REGIONS[0];
+const topicLink = t => `<a href="#${t.id}-practice" data-topic="${t.id}">${esc(t.short || t.name)}${CHECK}</a>`;
 function renderTopicMenu() {
   $("#menuTabs").innerHTML = MENU_TABS.map(g => `<button type="button" role="tab" data-group="${esc(g)}" aria-selected="${g === menuGroup}">${esc(g)}</button>`).join("");
   const hid = tab => tab === menuGroup ? "" : " hidden";
-  let last = "";
-  $("#topicList").innerHTML = TOPICS.map(t => {
-    const tab = tabOf(t.group), head = tab === REGION_TAB && t.group !== last ? `<div class="menu-group" data-tab="${tab}"${hid(tab)}>${esc(t.group)}</div>` : "";
-    last = t.group;
-    return head + `<a href="#${t.id}-practice" data-topic="${t.id}" data-tab="${esc(tab)}"${hid(tab)}>${esc(t.short || t.name)}${CHECK}</a>`;
-  }).join("") +
+  $("#topicList").innerHTML = MAIN_TABS.map(tab => TOPICS.filter(t => t.group === tab).map(t => topicLink(t).replace("<a ", `<a data-tab="${tab}"${hid(tab)} `)).join("")).join("") +
+    `<div class="reg-pane" data-tab="${REGION_TAB}"${hid(REGION_TAB)}>
+      <div class="reg-list" role="tablist" aria-label="Countries">${REGIONS.map(g => `<button type="button" role="tab" data-reg="${esc(g)}" aria-selected="${g === menuRegion}">${esc(g)}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>`).join("")}</div>
+      <div class="reg-games">${REGIONS.map(g => `<div class="reg-set" data-reg-set="${esc(g)}"${g === menuRegion ? "" : " hidden"}>${TOPICS.filter(t => t.group === g).map(topicLink).join("")}</div>`).join("")}</div>
+    </div>` +
     SPECIALS.map(x => `<a href="#${x.id}" data-special="${x.id}" data-tab="${SPECIAL_GROUP}"${hid(SPECIAL_GROUP)}>${esc(x.name)}${CHECK}</a>`).join("");
   $("#topicList").dataset.tab = menuGroup;
   if (T) syncTopicLinks();
+}
+function showRegion(g) {
+  if (!REGIONS.includes(g)) return;
+  menuRegion = g;
+  $("#topicList").querySelectorAll("[data-reg]").forEach(b => b.setAttribute("aria-selected", b.dataset.reg === g));
+  $("#topicList").querySelectorAll("[data-reg-set]").forEach(d => { d.hidden = d.dataset.regSet !== g; });
 }
 function showMenuGroup(g) {
   menuGroup = g;
   $("#menuTabs").querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", b.dataset.group === g));
   $("#topicList").querySelectorAll("[data-tab]").forEach(a => { a.hidden = a.dataset.tab !== g; });
   $("#topicList").dataset.tab = g;
+  if (g === REGION_TAB) showRegion(T && !special && REGIONS.includes(T.def.group) ? T.def.group : menuRegion);
 }
+// Hover (mouse) or tap/keyboard focus picks the country
+$("#topicList").addEventListener("mouseover", e => { const b = e.target.closest("[data-reg]"); if (b && matchMedia("(hover: hover)").matches) showRegion(b.dataset.reg); });
+$("#topicList").addEventListener("click", e => { const b = e.target.closest("[data-reg]"); if (b) showRegion(b.dataset.reg); });
+$("#topicList").addEventListener("focusin", e => { const b = e.target.closest("[data-reg]"); if (b) showRegion(b.dataset.reg); });
 $("#menuTabs").addEventListener("click", e => { const b = e.target.closest("[data-group]"); if (b) showMenuGroup(b.dataset.group); });
 
 function syncTopicLinks() {
