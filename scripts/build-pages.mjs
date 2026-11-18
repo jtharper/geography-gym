@@ -5,6 +5,7 @@
 //   public/cards/*.png         1200×630 preview images
 //   public/sitemap.xml, public/robots.txt
 // Run after `npm run data`: npm run pages
+import { aboutBody, privacyBody, contactBody } from './site-pages.mjs';
 import fs from 'fs';
 import vm from 'vm';
 import { Resvg } from '@resvg/resvg-js';
@@ -151,7 +152,7 @@ ${jsonld ? `<script type="application/ld+json">${JSON.stringify(jsonld)}</script
 <main class="page-main">
 ${body}
 </main>
-<footer class="page-foot"><a href="/">Play</a> · <a href="/quizzes/">All quizzes</a> · <a href="/daily/">Daily challenge</a> · <span>Free, no sign-up. Progress is saved in your browser.</span></footer>
+<footer class="page-foot"><a href="/">Play</a> · <a href="/quizzes/">All quizzes</a> · <a href="/daily/">Daily challenge</a> · <a href="/about/">About</a> · <a href="/privacy/">Privacy</a> · <a href="/contact/">Contact</a><br><span>Free, no sign-up. Progress is saved in your browser.</span></footer>
 </body>
 </html>
 `;
@@ -210,11 +211,22 @@ fs.mkdirSync('public/daily', { recursive: true });
 fs.writeFileSync('public/daily/index.html', page({ path: '/daily/', title: 'GeoGym Daily Challenge',
   description: '10 geography questions, the same for everyone, new every day. Flags, capitals, maps and more. Can you get 10 out of 10?', card: 'daily', body: dailyBody }));
 
+/* ---------- about, privacy, contact ---------- */
+const SITE_PAGES = [
+  ['about', 'About GeoGym', 'GeoGym is a free geography game: flags, capitals, maps, shapes, landmarks and more. No sign-up; progress stays in your browser.', aboutBody({ topics: TOPICS.length })],
+  ['privacy', 'Privacy policy | GeoGym', "GeoGym's privacy policy: no accounts, progress saved on your device, and how ads and cookies are used.", privacyBody()],
+  ['contact', 'Contact | GeoGym', 'Questions, ideas or a mistake you spotted in a GeoGym quiz? Get in touch.', contactBody()]
+];
+for (const [slug, title, description, body] of SITE_PAGES) {
+  fs.mkdirSync(`public/${slug}`, { recursive: true });
+  fs.writeFileSync(`public/${slug}/index.html`, page({ path: `/${slug}/`, title, description, card: 'home', body: `<div class="prose">${body}</div>` }));
+}
+
 /* ---------- sitemap and robots ---------- */
 const today = new Date().toISOString().slice(0, 10);
 fs.writeFileSync('public/sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${['/', '/quizzes/', ...pages.map(p => `/${p.slug}/`)].map(u => `  <url><loc>${SITE}${u}</loc><lastmod>${today}</lastmod></url>`).join('\n')}
+${['/', '/quizzes/', ...pages.map(p => `/${p.slug}/`), '/about/', '/privacy/', '/contact/'].map(u => `  <url><loc>${SITE}${u}</loc><lastmod>${today}</lastmod></url>`).join('\n')}
 </urlset>
 `);
 fs.writeFileSync('public/robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`);
@@ -324,4 +336,4 @@ card('home', { title: 'Free geography quizzes', sub: `${TOPICS.length} quizzes: 
 const squares = [1, 1, 0, 1, 1, 1, 0, 1, 1, 1].map((ok, i) => `<rect x="${ART.x + 10 + (i % 5) * 98}" y="${ART.y + 110 + Math.floor(i / 5) * 98}" width="82" height="82" rx="16" fill="${ok ? C.good : C.bad}"/>`).join('');
 card('daily', { title: 'Daily Challenge', sub: '10 questions, the same for everyone, new every day', art: squares });
 
-console.log(`pages: ${pages.length} topics + hub + daily, ${pages.length + 2} cards, sitemap with ${pages.length + 2} URLs`);
+console.log(`pages: ${pages.length} topics + hub + daily + about/privacy/contact, ${pages.length + 2} cards, sitemap with ${pages.length + 5} URLs`);

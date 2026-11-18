@@ -5,6 +5,7 @@
 
 /* Geography Gym, "Clean": one centered column, the flag is the only loud thing on screen. */
 :root {
+  --foot: 30px; /* the small footer under the game (About, Privacy, Contact) */
   --map-hit: var(--accent); /* right answer on the map (Explorer: green, so it never looks like the red wrong pick) */
   --bg: #f6f7f9;
   --surface: #ffffff;
@@ -293,8 +294,8 @@ a.btn.primary { color: var(--bg); }
 @media (min-width: 900px) {
   #view-practice, #view-quiz { max-width: 820px; }
   .answers, .flag-answers { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .q-stack { height: calc(100vh - 150px); min-height: 460px; justify-content: center; }
-  #view-quiz .q-stack { height: calc(100vh - 200px); }
+  .q-stack { height: calc(100vh - 150px - var(--foot)); min-height: 460px; justify-content: center; }
+  #view-quiz .q-stack { height: calc(100vh - 200px - var(--foot)); }
   .qflag { width: min(440px, calc((100vh - 360px) * 4 / 3)); transition: width .35s ease; }
   .qflag.small { width: min(220px, calc((100vh - 520px) * 4 / 3)); }
   .q-stack.answered { justify-content: flex-start; gap: 12px; }
@@ -323,8 +324,8 @@ a.btn.primary { color: var(--bg); }
 }
 @media (min-width: 900px) and (max-height: 700px) {
   .top { padding-top: 14px; padding-bottom: 14px; }
-  .q-stack { height: calc(100vh - 142px); }
-  #view-quiz .q-stack { height: calc(100vh - 186px); }
+  .q-stack { height: calc(100vh - 142px - var(--foot)); }
+  #view-quiz .q-stack { height: calc(100vh - 186px - var(--foot)); }
   .qtop { margin-bottom: 10px; }
   .q-stack.answered { gap: 8px; }
   .q-stack.answered .qflag { width: min(120px, calc(10vh * 4 / 3)); }
@@ -427,9 +428,9 @@ body.special #modeNav, body.special .gear-wrap { display: none; }
 @media (min-width: 900px) {
   #view-special { max-width: 820px; }
   #view-special.wide { max-width: 760px; }
-  #view-special .q-stack { height: calc(100vh - 160px); }
+  #view-special .q-stack { height: calc(100vh - 160px - var(--foot)); }
 }
-@media (min-width: 900px) and (max-height: 700px) { #view-special .q-stack { height: calc(100vh - 146px); } }
+@media (min-width: 900px) and (max-height: 700px) { #view-special .q-stack { height: calc(100vh - 146px - var(--foot)); } }
 .marks { display: flex; gap: 6px; justify-content: center; }
 .marks span { width: 22px; height: 22px; border-radius: 6px; background: var(--good); }
 .marks span.bad { background: var(--bad); }
@@ -554,3 +555,9 @@ body.special #modeNav, body.special .gear-wrap { display: none; }
   .map-ctrl button + button { border-top: 0; border-left: 1px solid var(--line); }
   .map-key { right: 120px; }
 }
+
+/* Small footer under the game: About, Privacy, Contact, All quizzes. Hidden while an answered question fills a phone screen. */
+.site-foot { height: var(--foot); flex: none; display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.site-foot a { color: var(--muted); font-weight: 600; text-decoration: none; }
+@media (hover: hover) { .site-foot a:hover { color: var(--ink); text-decoration: underline; } }
+@media (max-width: 899px) { body.fit .site-foot { display: none; } }

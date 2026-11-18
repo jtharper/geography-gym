@@ -38,3 +38,10 @@
 .hub-list span { font-size: 13px; line-height: 1.4; }
 .page-foot { padding-top: 18px; padding-bottom: 28px; font-size: 14px; color: var(--muted); border-top: 1px solid var(--line); }
 .page-foot a { color: var(--muted); font-weight: 600; }
+/* About, Privacy, Contact */
+.prose { max-width: 680px; }
+.prose p, .prose li { font-size: 16px; line-height: 1.6; }
+.prose ul { padding-left: 20px; }
+.prose li { margin: 4px 0; }
+.prose a { color: var(--accent); font-weight: 600; }
+.prose h2 { font-size: 20px; margin: 32px 0 8px; }

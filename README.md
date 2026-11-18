@@ -61,6 +61,8 @@ Each topic keeps its own progress. To add a topic, add an entry to `TOPICS` at t
 
 ## Pages for search engines and link previews
 
+**About, Privacy and Contact** pages (`/about/`, `/privacy/`, `/contact/`, written in `scripts/site-pages.mjs`) are linked from a small footer under the game and on every generated page. Contact email: support@geogym.party. Keep the privacy policy in step with the site: if ads, analytics or anything else that collects data changes, update it and its date.
+
 The game itself is one page (`index.html`). So that each quiz can be found on Google and looks good when shared, `scripts/build-pages.mjs` also builds:
 
 - **A page for every topic**, like `/flag-quiz/` or `/us-state-capitals-quiz/`, with its own title and description, buttons into the game, and a full list of the answers.
