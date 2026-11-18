@@ -515,3 +515,10 @@ body.special #modeNav, body.special .gear-wrap { display: none; }
   .panel { top: 64px; }
   .modes { margin-top: 2px; }
 }
+/* Phones: zoom buttons sit in a small row at the bottom right, so they don't cover the East Coast or Europe */
+@media (max-width: 640px) {
+  .map-ctrl { top: auto; bottom: 8px; right: 8px; grid-auto-flow: column; }
+  .map-ctrl button { width: 32px; height: 32px; }
+  .map-ctrl button + button { border-top: 0; border-left: 1px solid var(--line); }
+  .map-key { right: 120px; }
+}

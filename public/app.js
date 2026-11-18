@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611181633";
+const VERSION = "202611181700";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -1304,17 +1304,28 @@ function answerText(def, q) {
   return it.ans;
 }
 // Runs a list of {t, q} questions; calls done(results) at the end
-function runMixed(list, { onDone, label }) {
-  const t0 = Date.now(), marks = [];
-  let i = 0, timer = setInterval(() => { const el = $("#qTime"); if (el) el.textContent = fmtTime((Date.now() - t0) / 1000); }, 500);
-  const ask = () => {
+// Runs n questions; getQ(i) resolves to {t, q}. Questions can load one at a time; the clock pauses while one loads.
+function runMixed(n, getQ, { onDone, label }) {
+  let t0 = Date.now(), i = 0;
+  const marks = [], asked = [];
+  const timer = setInterval(() => { const el = $("#qTime"); if (el) el.textContent = fmtTime((Date.now() - t0) / 1000); }, 500);
+  const ask = async () => {
     if (special !== label) { clearInterval(timer); return; }
-    if (i >= list.length) { clearInterval(timer); specialCtl = null; return onDone({ marks, secs: (Date.now() - t0) / 1000 }); }
-    const { t, q } = list[i]; T = t;
+    if (i >= n) { clearInterval(timer); specialCtl = null; return onDone({ marks, secs: (Date.now() - t0) / 1000, list: asked }); }
+    const p = getQ(i); let ready = false; p.then(() => { ready = true; }, () => {});
+    await Promise.resolve();
+    const waitFrom = Date.now();
+    if (!ready) sHost().innerHTML = loadingCard(i ? "Loading the next question…" : "Loading…");
+    let item;
+    try { item = await p; } catch (e) { clearInterval(timer); sHost().innerHTML = loadingCard("This question didn't load. Check your connection and refresh the page."); return; }
+    if (special !== label) { clearInterval(timer); return; }
+    if (!ready) t0 += Date.now() - waitFrom;
+    asked[i] = item;
+    const { t, q } = item; T = t;
     specialCtl = renderQuestion(sHost(), q, {
-      top: qTop(i, list.length, t.def.name, t0), below: `${marks.filter(Boolean).length} correct so far`,
-      nextLabel: i === list.length - 1 ? "See results" : "Next",
-      onAnswer(ok) { if (!q.compare) grade(q.it.id, ok); marks.push(ok); sHost().querySelector(".qtrack span").style.width = (100 * (i + 1) / list.length) + "%"; },
+      top: qTop(i, n, t.def.name, t0), below: `${marks.filter(Boolean).length} correct so far`,
+      nextLabel: i === n - 1 ? "See results" : "Next",
+      onAnswer(ok) { if (!q.compare) grade(q.it.id, ok); marks.push(ok); sHost().querySelector(".qtrack span").style.width = (100 * (i + 1) / n) + "%"; },
       onNext() { i++; ask(); }
     });
   };
@@ -1335,21 +1346,24 @@ function dailyStreak(log = dailyLog()) {
   return n;
 }
 const niceDay = day => new Date(day + "T12:00:00").toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
-async function dailyQuestions(day) {
+// Today's 10 topics (no data needed to pick them)
+function dailyTopics(day) {
   const rnd = seeded(hashStr("geography-gym-" + day));
   const ids = DAILY_POOL.slice();
   for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
-  const defs = ids.slice(0, 10).map(id => TOPIC[id]);
-  const topics = await prepTopics(defs, def => ({ style: def.styles[0], region: "All", terr: !!def.terrOn }));
-  const real = Math.random; Math.random = rnd; // same answer choices for everyone
+  return ids.slice(0, 10).map(id => TOPIC[id]);
+}
+// Question i of today's challenge. Each question has its own seed, so questions can load one at a time
+// (only the data that question needs) and still come out the same for everyone.
+async function dailyQuestion(day, def, i) {
+  const t = (await prepTopics([def], d => ({ style: d.styles[0], region: "All", terr: !!d.terrOn })))[def.id];
+  const real = Math.random, prevT = T;
+  Math.random = seeded(hashStr(`geography-gym-${day}-${i}`)); T = t;
   try {
-    return defs.map(def => {
-      T = topics[def.id];
-      const P = pool().sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-      if (def.kind === "compare") { const a = pick(P); return { t: T, q: makeCompare(a, compareOpponent(a, P)) }; }
-      return { t: T, q: makeQuestion(pick(P), T.pref.style) };
-    });
-  } finally { Math.random = real; }
+    const P = pool().sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+    if (def.kind === "compare") { const a = pick(P); return { t, q: makeCompare(a, compareOpponent(a, P)) }; }
+    return { t, q: makeQuestion(pick(P), t.pref.style) };
+  } finally { Math.random = real; T = prevT; } // T may belong to the question on screen
 }
 function shareText(day, r) {
   const d = new Date(day + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -1390,11 +1404,19 @@ const daily = {
       ${streak ? `<p><b>${streak}-day streak.</b> Play today to keep it going.</p>` : ""}
       <button class="btn primary" type="button" id="dStart">Start</button>
     </div>`;
-    $("#dStart").addEventListener("click", async () => {
-      sHost().innerHTML = loadingCard("Loading today's questions…");
-      let list; try { list = await dailyQuestions(day); } catch (e) { sHost().innerHTML = loadingCard("Today's questions didn't load. Refresh the page to try again."); return; }
-      if (special !== "daily") return;
-      runMixed(list, { label: "daily", onDone({ marks, secs }) {
+    // Load each question when it's needed. The first one starts loading now, while you read this page;
+    // once you start, the next one loads in the background while you play.
+    const defs = dailyTopics(day), made = [];
+    let started = false;
+    const getQ = i => made[i] || (made[i] = dailyQuestion(day, defs[i], i).then(item => {
+      if (started && i + 1 < defs.length) setTimeout(() => getQ(i + 1).catch(() => {}), 0);
+      return item;
+    }));
+    getQ(0).catch(() => { made[0] = null; });
+    $("#dStart").addEventListener("click", () => {
+      started = true;
+      if (made[0]) made[0].then(() => getQ(1).catch(() => {}), () => {});
+      runMixed(defs.length, getQ, { label: "daily", onDone({ marks, secs, list }) {
         const r = { s: marks.filter(Boolean).length, n: marks.length, m: marks.map(x => x ? 1 : 0).join(""), t: Math.round(secs) };
         const lg = dailyLog(); lg[day] = r; try { localStorage.setItem(DKEY, JSON.stringify(lg)); } catch (e) {}
         daily.results(day, r, list);
@@ -1418,10 +1440,11 @@ const daily = {
     if (sh) {
       let file = null;
       shareImage(day, r).then(f => { file = f; }).catch(() => {});
+      // Just the picture and the link (the picture already shows the score), no text
       sh.addEventListener("click", () => {
-        const text = shareText(day, r), title = "GeoGym Daily Challenge";
-        const data = file && navigator.canShare && navigator.canShare({ files: [file] }) ? { files: [file], title, text } : { title, text };
-        navigator.share(data).catch(e => { if (data.files && e && e.name !== "AbortError") navigator.share({ title, text }).catch(() => {}); });
+        const url = location.origin + "/daily/";
+        const data = file && navigator.canShare && navigator.canShare({ files: [file], url }) ? { files: [file], url } : { url };
+        navigator.share(data).catch(e => { if (data.files && e && e.name !== "AbortError") navigator.share({ url }).catch(() => {}); });
       });
     }
   }
@@ -1460,7 +1483,7 @@ const review = {
       catch (e) { sHost().innerHTML = loadingCard("This didn't load. Refresh the page to try again."); return; }
       if (special !== "review") return;
       const list = pickd.map(w => { T = topics[w.def.id]; const it = T.byId[w.id]; return it ? { t: T, q: makeQuestion(it, T.pref.style) } : null; }).filter(Boolean);
-      runMixed(list, { label: "review", onDone({ marks }) {
+      runMixed(list.length, i => Promise.resolve(list[i]), { label: "review", onDone({ marks }) {
         specialMeter();
         const left = weakSpots().length, s = marks.filter(Boolean).length;
         sHost().innerHTML = `<div class="setup">
@@ -1539,13 +1562,21 @@ function parseHash() {
   if (MODES.includes(h)) return { topic: settings.topic, mode: h };
   return { topic: settings.topic, mode: "practice" };
 }
-function loadSet(name) {
+// Just the rows (names, facts). Lakes and landmarks need country names, not every flag.
+function loadRows(name) {
   const s = SETS[name];
   if (s.rows) return Promise.resolve();
-  if (!s.loading) s.loading = Promise.all([fetch(vurl(s.data)), s.images ? fetch(vurl(s.images)) : null, ...(s.needs || []).map(loadSet)]).then(async ([d, i]) => {
-    if (!d.ok || (i && !i.ok)) throw new Error("load");
-    s.rows = await d.json();
-    if (i) (await i.json()).forEach(f => { s.img[f.c] = URL.createObjectURL(new Blob([f.s], { type: "image/svg+xml" })); });
+  if (!s.rowsLoading) s.rowsLoading = fetch(vurl(s.data)).then(r => { if (!r.ok) throw new Error("load"); return r.json(); })
+    .then(rows => { s.rows = rows; }).catch(err => { s.rowsLoading = null; throw err; });
+  return s.rowsLoading;
+}
+// Rows plus images
+function loadSet(name) {
+  const s = SETS[name];
+  if (s.ready) return Promise.resolve();
+  if (!s.loading) s.loading = Promise.all([loadRows(name), s.images ? fetch(vurl(s.images)).then(r => { if (!r.ok) throw new Error("load"); return r.json(); }) : null, ...(s.needs || []).map(loadRows)]).then(([, imgs]) => {
+    if (imgs) imgs.forEach(f => { s.img[f.c] = URL.createObjectURL(new Blob([f.s], { type: "image/svg+xml" })); });
+    s.ready = true;
   }).catch(err => { s.loading = null; throw err; });
   return s.loading;
 }
