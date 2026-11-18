@@ -59,6 +59,7 @@ h1, h2, h3 { margin: 0; line-height: 1.2; text-wrap: balance; }
 .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 48px; flex-wrap: wrap; }
 .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; letter-spacing: -0.01em; color: var(--ink); text-decoration: none; }
 .logo svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.logo-mark { width: 30px; height: 30px; border-radius: 8px; flex: none; }
 .top-right { display: flex; align-items: center; gap: 12px; }
 .progress-mini { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
 .progress-mini b { color: var(--ink); font-weight: 700; }

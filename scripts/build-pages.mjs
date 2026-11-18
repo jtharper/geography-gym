@@ -9,6 +9,7 @@ import fs from 'fs';
 import vm from 'vm';
 import { Resvg } from '@resvg/resvg-js';
 import { COPY } from './topic-copy.mjs';
+import { logoSVG, MARK } from './logo.mjs';
 
 const SITE = 'https://geographyquiz.party';
 const read = f => JSON.parse(fs.readFileSync('public/' + f, 'utf8'));
@@ -122,7 +123,7 @@ const THEME_SCRIPT = `<script>
     else if (k === "clean" || k === "clean-dark") document.documentElement.dataset.theme = k === "clean" ? "light" : "dark";
   } catch (e) {}
 </script>`;
-const LOGO = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></svg>`;
+const LOGO = `<img class="logo-mark" src="/logo.svg" alt="" width="30" height="30">`;
 function page({ path, title, description, card, body, jsonld, noindex, extraHead = '' }) {
   const url = SITE + path;
   return `<!DOCTYPE html>
@@ -134,7 +135,7 @@ function page({ path, title, description, card, body, jsonld, noindex, extraHead
 <meta name="description" content="${esc(description)}">
 <link rel="canonical" href="${url}">
 ${noindex ? '<meta name="robots" content="noindex">\n' : ''}<meta property="og:type" content="website">
-<meta property="og:site_name" content="Geography Gym">
+<meta property="og:site_name" content="GeoGym">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${url}">
@@ -146,13 +147,16 @@ ${noindex ? '<meta name="robots" content="noindex">\n' : ''}<meta property="og:t
 <meta name="twitter:description" content="${esc(description)}">
 <meta name="twitter:image" content="${SITE}/cards/${card}.png">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#15171c">
 ${THEME_SCRIPT}
 <link rel="stylesheet" href="/styles.css?v=${VERSION}">
 <link rel="stylesheet" href="/themes.css?v=${VERSION}">
 <link rel="stylesheet" href="/pages.css?v=${VERSION}">
 ${jsonld ? `<script type="application/ld+json">${JSON.stringify(jsonld)}</script>\n` : ''}${extraHead}</head>
 <body class="page">
-<header class="page-top"><a class="logo" href="/">${LOGO}Geography Gym</a><a class="page-all" href="/quizzes/">All quizzes</a></header>
+<header class="page-top"><a class="logo" href="/">${LOGO}GeoGym</a><a class="page-all" href="/quizzes/">All quizzes</a></header>
 <main class="page-main">
 ${body}
 </main>
@@ -180,7 +184,7 @@ for (const t of TOPICS) {
     intro = what[1] + ' Practice until it sticks, race the clock, or try to name them all.';
   }
   const count = rows.length;
-  const title = `${t.name} quiz${['compare'].includes(t.kind) ? '' : ` – ${count} ${t.unit || 'questions'}`} | Geography Gym`;
+  const title = `${t.name} quiz${['compare'].includes(t.kind) ? '' : ` – ${count} ${t.unit || 'questions'}`} | GeoGym`;
   const modes = t.modes.map((m, i) => `<a class="btn${i ? '' : ' primary'}" href="/#${t.id}-${m}">${MODE_LABEL[m]}</a>`).join('');
   const related = TOPICS.filter(o => o.group === t.group && o.id !== t.id).map(o => `<a href="/${SLUG[o.id]}/">${esc(o.name)}</a>`).join('');
   const refTitle = t.kind === 'compare' ? (t.field === 'area' ? 'Every country by area' : 'Every country by population') : `Everything in this quiz`;
@@ -193,7 +197,7 @@ for (const t of TOPICS) {
 <section class="more"><h2>More ${esc(t.group === 'World' || t.group === 'Trivia' || t.group === 'Nature' ? t.group.toLowerCase() : t.group)} quizzes</h2><div class="links">${related}</div></section>`;
   fs.mkdirSync(`public/${slug}`, { recursive: true });
   fs.writeFileSync(`public/${slug}/index.html`, page({ path: `/${slug}/`, title, description: desc, card: slug, body,
-    jsonld: { '@context': 'https://schema.org', '@type': 'WebPage', name: `${t.name} quiz`, description: desc, url: `${SITE}/${slug}/`, isPartOf: { '@type': 'WebSite', name: 'Geography Gym', url: SITE + '/' } } }));
+    jsonld: { '@context': 'https://schema.org', '@type': 'WebPage', name: `${t.name} quiz`, description: desc, url: `${SITE}/${slug}/`, isPartOf: { '@type': 'WebSite', name: 'GeoGym', alternateName: 'Geography Gym', url: SITE + '/' } } }));
   pages.push({ t, slug, desc, count });
 }
 
@@ -203,16 +207,16 @@ const hubBody = `<h1>All geography quizzes</h1>
 <div class="play"><a class="btn primary" href="/">Start playing</a><a class="btn" href="/daily/">Daily challenge</a></div>
 ${groups.map(g => `<section class="hub" id="${g.toLowerCase().replace(/[^a-z]+/g, '-')}"><h2>${esc(g)}</h2><ul class="hub-list">${pages.filter(p => p.t.group === g).map(p => `<li><a href="/${p.slug}/">${esc(p.t.name)}</a><span>${esc(p.desc.replace(/^Free [^:]+: ?/, '').replace(/^./, c => c.toUpperCase()))}</span></li>`).join('')}</ul></section>`).join('')}`;
 fs.mkdirSync('public/quizzes', { recursive: true });
-fs.writeFileSync('public/quizzes/index.html', page({ path: '/quizzes/', title: `All ${TOPICS.length} geography quizzes | Geography Gym`,
+fs.writeFileSync('public/quizzes/index.html', page({ path: '/quizzes/', title: `All ${TOPICS.length} geography quizzes | GeoGym`,
   description: `${TOPICS.length} free geography quizzes: flags, capitals, maps, shapes, lakes, rivers, landmarks and more. No sign-up.`, card: 'home', body: hubBody }));
 
 /* ---------- daily: the link people share ---------- */
-const dailyBody = `<h1>Daily challenge</h1>
+const dailyBody = `<h1>GeoGym Daily Challenge</h1>
 <p class="lead">10 questions from 10 different topics. Everyone gets the same ones, and a new set comes out every day at midnight. Can you beat your friend's score?</p>
 <div class="play"><a class="btn primary" href="/#daily">Play today's challenge</a></div>
 <script>location.replace("/#daily");</script>`;
 fs.mkdirSync('public/daily', { recursive: true });
-fs.writeFileSync('public/daily/index.html', page({ path: '/daily/', title: 'Geography Gym daily challenge',
+fs.writeFileSync('public/daily/index.html', page({ path: '/daily/', title: 'GeoGym Daily Challenge',
   description: '10 geography questions, the same for everyone, new every day. Flags, capitals, maps and more. Can you get 10 out of 10?', card: 'daily', body: dailyBody }));
 
 /* ---------- sitemap and robots ---------- */
@@ -223,6 +227,15 @@ ${['/', '/quizzes/', ...pages.map(p => `/${p.slug}/`)].map(u => `  <url><loc>${S
 </urlset>
 `);
 fs.writeFileSync('public/robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`);
+
+/* ---------- logo and home-screen icons ---------- */
+fs.writeFileSync('public/logo.svg', logoSVG());
+fs.writeFileSync('public/favicon.svg', logoSVG());
+for (const [file, size] of [['apple-touch-icon.png', 180], ['icon-192.png', 192], ['icon-512.png', 512]])
+  fs.writeFileSync('public/' + file, new Resvg(logoSVG({ rounded: false, size })).render().asPng());
+fs.writeFileSync('public/site.webmanifest', JSON.stringify({ name: 'GeoGym', short_name: 'GeoGym', description: 'Free geography quizzes: flags, capitals, maps and more.',
+  start_url: '/', display: 'standalone', background_color: '#15171c', theme_color: '#15171c',
+  icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: '/icon-512.png', sizes: '512x512', type: 'image/png' }] }, null, 2) + '\n');
 
 /* ---------- preview cards (1200×630 PNG) ---------- */
 const C = { bg: '#f6f7f9', ink: '#15171c', muted: '#5b6270', accent: '#2f6bff', land: '#dfe3e8', line: '#ffffff', good: '#1f9d55', bad: '#e5484d', surface: '#ffffff' };
@@ -268,8 +281,8 @@ function card(file, { title, sub, art }) {
   const subLines = wrap(sub, 32).slice(0, lines.length > 2 ? 2 : 3), top = 205 - (lines.length - 1) * 20;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" font-family="Manrope">
 <rect width="1200" height="630" fill="${C.bg}"/>
-<g transform="translate(64 64)" fill="none" stroke="${C.ink}" stroke-width="2.2"><g transform="scale(1.75)"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></g></g>
-<text x="118" y="98" font-weight="800" font-size="34" fill="${C.ink}">Geography Gym</text>
+<svg x="62" y="58" width="52" height="52" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="#15171c"/>${MARK}</svg>
+<text x="128" y="96" font-weight="800" font-size="36" fill="${C.ink}">GeoGym</text>
 ${lines.map((l, i) => `<text x="64" y="${top + 60 + i * (ts + 8)}" font-weight="800" font-size="${ts}" fill="${C.ink}" letter-spacing="-1.2">${esc(l)}</text>`).join('')}
 ${subLines.map((l, i) => `<text x="64" y="${top + 60 + lines.length * (ts + 8) + 22 + i * 38}" font-weight="600" font-size="28" fill="${C.muted}">${esc(l)}</text>`).join('')}
 <text x="64" y="566" font-weight="700" font-size="28" fill="${C.accent}">geographyquiz.party</text>
@@ -318,6 +331,6 @@ for (const p of pages) {
 }
 card('home', { title: 'Free geography quizzes', sub: `${TOPICS.length} quizzes: flags, capitals, maps and more`, art: flagGrid('countries', ['JP', 'BR', 'ZA', 'CA'], ART.x, ART.y + 20, ART.w, ART.h) });
 const squares = [1, 1, 0, 1, 1, 1, 0, 1, 1, 1].map((ok, i) => `<rect x="${ART.x + 10 + (i % 5) * 98}" y="${ART.y + 110 + Math.floor(i / 5) * 98}" width="82" height="82" rx="16" fill="${ok ? C.good : C.bad}"/>`).join('');
-card('daily', { title: 'Daily challenge', sub: '10 questions, the same for everyone, new every day', art: squares });
+card('daily', { title: 'Daily Challenge', sub: '10 questions, the same for everyone, new every day', art: squares });
 
 console.log(`pages: ${pages.length} topics + hub + daily, ${pages.length + 2} cards, sitemap with ${pages.length + 2} URLs`);

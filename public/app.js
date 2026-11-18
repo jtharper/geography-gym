@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611181459";
+const VERSION = "202611181615";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -1348,7 +1348,26 @@ async function dailyQuestions(day) {
 }
 function shareText(day, r) {
   const d = new Date(day + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  return `Geography Gym daily · ${d}\n${r.s}/${r.n} in ${fmtTime(r.t)}\n${r.m.split("").map(c => c === "1" ? "🟩" : "🟥").join("")}\n${location.origin}/daily/`;
+  return `GeoGym Daily Challenge · ${d}\n${r.s}/${r.n} in ${fmtTime(r.t)}\n${r.m.split("").map(c => c === "1" ? "🟩" : "🟥").join("")}\n${location.origin}/daily/`;
+}
+// A picture of the result for the share sheet (it shows as the preview, and Messages or Snapchat send it with the text)
+async function shareImage(day, r) {
+  const S = 1080, c = document.createElement("canvas"); c.width = c.height = S;
+  const g = c.getContext("2d");
+  try { await Promise.all(["600 40px Manrope", "800 80px Manrope"].map(f => document.fonts.load(f))); } catch (e) {}
+  const logo = await new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = "logo.svg"; });
+  g.fillStyle = "#15171c"; g.fillRect(0, 0, S, S);
+  if (logo) g.drawImage(logo, S / 2 - 90, 90, 180, 180);
+  g.textAlign = "center"; g.fillStyle = "#ffffff";
+  g.font = "800 64px Manrope, sans-serif"; g.fillText("GeoGym Daily Challenge", S / 2, 360);
+  g.fillStyle = "#9aa0aa"; g.font = "600 38px Manrope, sans-serif"; g.fillText(niceDay(day), S / 2, 420);
+  g.fillStyle = "#ffffff"; g.font = "800 230px Manrope, sans-serif"; g.fillText(`${r.s}/${r.n}`, S / 2, 660);
+  g.fillStyle = "#9aa0aa"; g.font = "600 44px Manrope, sans-serif"; g.fillText(`in ${fmtTime(r.t)}`, S / 2, 730);
+  const n = r.m.length, sz = 70, gap = 14, x0 = (S - (n * sz + (n - 1) * gap)) / 2;
+  r.m.split("").forEach((m, i) => { g.fillStyle = m === "1" ? "#1f9d55" : "#e5484d"; g.beginPath(); g.roundRect ? g.roundRect(x0 + i * (sz + gap), 800, sz, sz, 14) : g.rect(x0 + i * (sz + gap), 800, sz, sz); g.fill(); });
+  g.fillStyle = "#7aa2ff"; g.font = "700 40px Manrope, sans-serif"; g.fillText(location.host + "/daily", S / 2, 1000);
+  const blob = await new Promise(res => c.toBlob(res, "image/png"));
+  return blob ? new File([blob], "geogym-daily.png", { type: "image/png" }) : null;
 }
 async function copyText(text, btn) {
   try { await navigator.clipboard.writeText(text); }
@@ -1389,8 +1408,17 @@ const daily = {
     </div>${list ? resultList(list, r.m.split("").map(c => c === "1")) : ""}`;
     $("#dCopy").addEventListener("click", e => copyText(shareText(day, r), e.currentTarget));
     const sh = $("#dShare");
-    // Phones: the share sheet (Messages, WhatsApp…). The link in the text shows a preview card.
-    if (sh) sh.addEventListener("click", () => navigator.share({ text: shareText(day, r) }).catch(() => {}));
+    // Phones: the share sheet (Messages, WhatsApp…) with a picture of the result.
+    // The picture is made now, so the tap can open the share sheet straight away (phones require that).
+    if (sh) {
+      let file = null;
+      shareImage(day, r).then(f => { file = f; }).catch(() => {});
+      sh.addEventListener("click", () => {
+        const text = shareText(day, r), title = "GeoGym Daily Challenge";
+        const data = file && navigator.canShare && navigator.canShare({ files: [file] }) ? { files: [file], title, text } : { title, text };
+        navigator.share(data).catch(e => { if (data.files && e && e.name !== "AbortError") navigator.share({ title, text }).catch(() => {}); });
+      });
+    }
   }
 };
 
@@ -1490,7 +1518,7 @@ function showSpecial(sp) {
   $("#view-special").classList.toggle("wide", sp.id === "stats");
   $("#loading").hidden = true;
   $("#menuLabel").textContent = sp.name;
-  document.title = `${sp.name} · Geography Gym`;
+  document.title = `${sp.name} · GeoGym`;
   state.view = "special";
   syncTopicLinks(); specialMeter();
   sp.view.show();
@@ -1545,7 +1573,7 @@ async function route() {
   document.querySelectorAll(".view").forEach(s => s.hidden = s.id !== "view-" + mode);
   document.querySelectorAll("#modeNav a").forEach(a => { if (a.dataset.view === mode) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
   renderSettings();
-  document.title = `${T.def.name} · Geography Gym`;
+  document.title = `${T.def.name} · GeoGym`;
   VIEWS[mode].show();
 }
 renderTopicMenu();

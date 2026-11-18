@@ -1,4 +1,6 @@
-# Geography Gym
+# GeoGym
+
+GeoGym (Geography Gym) is a set of free geography quizzes.
 
 https://geographyquiz.party/
 
@@ -64,6 +66,9 @@ The game itself is one page (`index.html`). So that each quiz can be found on Go
 - **`/quizzes/`**: every topic on one page. It's linked from the bottom of the topic menu.
 - **`/daily/`**: the link the Daily challenge shares. It shows a preview card in chats and on social media, then sends visitors straight into today's challenge.
 - **Preview cards** (`/cards/*.png`, 1200×630) for every page, drawn from the game's own flags and maps.
+- **The logo and icons**: `logo.svg`, `favicon.svg`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png` and `site.webmanifest`, all from `scripts/logo.mjs`.
+
+On phones, the Daily challenge **Share** button also attaches a picture of your result (made in the browser), so the share sheet and Messages show it.
 - **`sitemap.xml`** and **`robots.txt`**.
 
 The words for each topic page live in `scripts/topic-copy.mjs`. The page addresses are in `SLUG` in `scripts/build-pages.mjs`: don't change one after it's live, or search engines lose it.
@@ -90,6 +95,7 @@ public/              ← the deployed site
 scripts/build-data.mjs  ← regenerates public/data/*
 scripts/build-pages.mjs ← topic pages, /quizzes/, /daily/, preview cards, sitemap (runs as part of npm run bump)
 scripts/topic-copy.mjs  ← the description and intro for each topic page
+scripts/logo.mjs        ← the logo (gold medal with a globe); build-pages.mjs writes logo.svg, favicon.svg, the home-screen icons and site.webmanifest from it
 ```
 
 ## Run locally
