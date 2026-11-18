@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611181814";
+const VERSION = "202611181826";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -341,26 +341,36 @@ function shapeSVG(id, cls = "shape") {
 }
 const textTile = (t, cls = "qtext") => `<div class="${cls}">${esc(t)}</div>`;
 
-/* ---------- sound (off by default) ---------- */
-let actx = null;
-function tone(freq, start, dur, type, vol) {
-  const o = actx.createOscillator(), g = actx.createGain();
-  o.type = type; o.frequency.value = freq;
-  g.gain.setValueAtTime(0, actx.currentTime + start);
-  g.gain.linearRampToValueAtTime(vol, actx.currentTime + start + 0.01);
-  g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + start + dur);
-  o.connect(g).connect(actx.destination);
-  o.start(actx.currentTime + start); o.stop(actx.currentTime + start + dur + 0.05);
+/* ---------- sound (off by default; the Sounds switch in settings) ----------
+   Two short clips, decoded once with Web Audio so they play the moment you answer (phones lag with <audio>).
+   sounds/right.mp3: "Mission complete chime" (soundshelfstudio), sounds/wrong.mp3: "Error mistake sound effect" (lesiakower),
+   both from Pixabay, trimmed to about 1 s. */
+let actx = null, sLoading = null, sNow = null;
+const SOUNDS = { right: "sounds/right.mp3", wrong: "sounds/wrong.mp3" }, sbuf = {};
+const audioCtx = () => actx || (actx = new (window.AudioContext || window.webkitAudioContext)());
+function loadSounds() {
+  if (!sLoading) {
+    const ctx = audioCtx();
+    sLoading = Promise.all(Object.entries(SOUNDS).map(([k, u]) => fetch(vurl(u)).then(r => { if (!r.ok) throw new Error("sound"); return r.arrayBuffer(); })
+      .then(b => new Promise((res, rej) => ctx.decodeAudioData(b, res, rej))).then(buf => { sbuf[k] = buf; })))
+      .catch(() => { sLoading = null; });
+  }
+  return sLoading;
 }
 function sfx(ok) {
   if (!settings.sound) return;
   try {
-    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-    if (actx.state === "suspended") actx.resume();
-    if (ok) { tone(660, 0, 0.1, "sine", 0.12); tone(880, 0.07, 0.16, "sine", 0.12); }
-    else tone(220, 0, 0.2, "triangle", 0.12);
+    const ctx = audioCtx();
+    if (ctx.state === "suspended") ctx.resume();
+    const buf = sbuf[ok ? "right" : "wrong"];
+    if (!buf) { loadSounds(); return; }
+    if (sNow) try { sNow.stop(); } catch (e) {} // answering fast: the new sound replaces the last one
+    const src = ctx.createBufferSource(), g = ctx.createGain();
+    g.gain.value = 0.7; src.buffer = buf; src.connect(g).connect(ctx.destination); src.start();
+    sNow = src; src.onended = () => { if (sNow === src) sNow = null; };
   } catch (e) {}
 }
+if (settings.sound) try { loadSounds(); } catch (e) {}
 
 /* ---------- popovers: topic menu + settings panel ---------- */
 const menu = $("#menu"), menuBtn = $("#menuBtn"), setPanel = $("#setPanel"), setBtn = $("#setBtn");
@@ -441,7 +451,10 @@ function renderSettings() {
 }
 $("#regionSel").addEventListener("change", e => { if (!T) return; T.pref.region = e.target.value; saveSettings(); settingsChanged(); });
 $("#terrToggle").addEventListener("change", e => { if (!T) return; T.pref.terr = e.target.checked; saveSettings(); settingsChanged(); });
-$("#soundToggle").addEventListener("change", e => { settings.sound = e.target.checked; saveSettings(); });
+$("#soundToggle").addEventListener("change", e => {
+  settings.sound = e.target.checked; saveSettings();
+  if (settings.sound) try { audioCtx().resume(); loadSounds().then(() => sfx(true)); } catch (err) {} // a sample, so you hear it's on
+});
 $("#styleSeg").addEventListener("click", e => {
   const b = e.target.closest("[data-style]"); if (!T || !b || b.dataset.style === T.pref.style) return;
   T.pref.style = b.dataset.style; saveSettings(); renderSettings();

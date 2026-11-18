@@ -143,5 +143,6 @@ Before committing a change to the site, run `npm run bump`. It stamps a new vers
 - Australian and German state flags: [niemela/flags](https://github.com/niemela/flags), from Wikimedia Commons (public domain).
 - Mountain peak locations and seas: [Natural Earth](https://www.naturalearthdata.com/) (public domain). Peak heights, landmarks, former names, driving sides and state nicknames were written for this game.
 - Demonyms and landlocked status: [world-countries](https://github.com/mledoze/countries).
+- Sounds (`public/sounds/`, trimmed): "Mission complete chime" by soundshelfstudio (right) and "Error mistake sound effect" by lesiakower (wrong), from [Pixabay](https://pixabay.com) under the Pixabay Content License.
 - Capital and landmark photos: the lead image of each city's or landmark's English Wikipedia article, loaded in the browser from the Wikipedia API. Each photo links to its article, where the image's author and license are listed.
 - Maps: [world-atlas](https://github.com/topojson/world-atlas) and [Natural Earth](https://www.naturalearthdata.com/) (public domain) for the world, lakes, rivers, mountain ranges and provinces; [us-atlas](https://github.com/topojson/us-atlas) (US Census Bureau, public domain) for the US.
