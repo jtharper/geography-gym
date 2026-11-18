@@ -1,6 +1,6 @@
 # GeoGym live 1v1 server: one Durable Object ("Room") per game code, talking to both players over WebSockets.
 # Deployed separately from the site (Cloudflare Workers Builds, root directory "multiplayer"). See README.md.
-name = "geogym-multiplayer"
+name = "geography-gym-multiplayer"
 main = "src/index.js"
 compatibility_date = "2025-06-01"
 workers_dev = true
