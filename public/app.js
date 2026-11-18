@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611181832";
+const VERSION = "202611181838";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -930,7 +930,7 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
       key = [[it.id, "hit", def.field === "area" ? "Bigger" : "More people"], [lose.id, ok ? "hit2" : "miss", ""]];
     } else if (def.kind === "neighbors") {
       const nbNames = it.nb.map(nameOf);
-      line = ok ? `Yes, ${esc(pLabel)} borders ${esc(it.label)}.` : (p ? `${esc(pLabel)} doesn't border ${esc(it.label)}.` : `${esc(it.label)}'s neighbors are shown in light blue.`);
+      line = ok ? `Yes, ${esc(pLabel)} borders ${esc(it.label)}.` : (p ? `${esc(pLabel)} doesn't border ${esc(it.label)}.` : `${esc(it.label)}'s neighbors are shown in light green.`);
       sub = `${esc(it.label)} borders ${esc(listJoin(nbNames))}${note ? " · " + esc(note) : ""}`;
       marks = { hit: [it.id], hit2: it.nb, miss: ok || !p ? [] : [p] };
       key = [[it.id, "hit", ""], [it.nb[0], "hit2", "Neighbors"]].concat(!ok && p ? [[p, "miss", "your pick"]] : []);
@@ -939,7 +939,7 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
       marks = null;
       key = [];
     } else if (def.kind === "locate") {
-      line = ok ? `Correct, that's ${esc(it.label)}.` : (p ? `That's ${esc(pLabel)}. ${esc(it.label)} is in blue.` : `${esc(it.label)} is in blue.`);
+      line = ok ? `Correct, that's ${esc(it.label)}.` : (p ? `That's ${esc(pLabel)}. ${esc(it.label)} is in green.` : `${esc(it.label)} is in green.`);
       marks = { hit: [it.id], miss: p && !ok ? [p] : [] };
       key = [[it.id, "hit", ""]].concat(p && !ok ? [[p, "miss", "your pick"]] : []);
     } else {

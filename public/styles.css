@@ -5,6 +5,7 @@
 
 /* Geography Gym, "Clean": one centered column, the flag is the only loud thing on screen. */
 :root {
+  --map-hit: var(--accent); /* right answer on the map (Explorer: green, so it never looks like the red wrong pick) */
   --bg: #f6f7f9;
   --surface: #ffffff;
   --ink: #15171c;
@@ -207,15 +208,15 @@ a.btn.primary { color: var(--bg); }
 .map { position: relative; width: 100%; aspect-ratio: 16 / 10; margin: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--map-sea); }
 .map-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .map-svg path { fill: var(--map-land); stroke: var(--map-border); stroke-width: .6px; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
-.map-svg path.hit { fill: var(--accent); }
+.map-svg path.hit { fill: var(--map-hit); }
 .map-svg path.miss { fill: var(--bad); opacity: .55; }
 .map-svg .ring { fill: none; stroke-width: 2px; vector-effect: non-scaling-stroke; }
-.map-svg .ring.hit { stroke: var(--accent); }
+.map-svg .ring.hit { stroke: var(--map-hit); }
 .map-svg .ring.miss { stroke: var(--bad); }
 .map-key { position: absolute; left: 10px; bottom: 8px; z-index: 1; display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; font-weight: 700; color: var(--ink); }
 .map-key span { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border-radius: 99px; padding: 3px 9px 3px 7px; box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
 .k { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-.k.hit { background: var(--accent); }
+.k.hit { background: var(--map-hit); }
 .k.miss { background: var(--bad); opacity: .7; }
 /* Question: one stacked column. Before answering, a big flag and the answers. After answering, the flag shrinks
    and the result, the map and any tip fill the rest of the screen (no scrolling on desktop). */
@@ -260,18 +261,18 @@ a.btn.primary { color: var(--bg); }
 .map-svg .dots { display: none; }
 .map-svg.show-dots .dots { display: block; }
 .map-svg .dot { fill: var(--map-land); stroke: var(--muted); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.map-svg .dot.hit { fill: var(--accent); stroke: var(--accent); }
+.map-svg .dot.hit { fill: var(--map-hit); stroke: var(--map-hit); }
 .map-svg .dot.miss { fill: var(--bad); stroke: var(--bad); }
-.map-svg path.hit2 { fill: color-mix(in srgb, var(--accent) 38%, var(--map-land)); }
-.k.hit2 { background: color-mix(in srgb, var(--accent) 45%, var(--map-land)); }
+.map-svg path.hit2 { fill: color-mix(in srgb, var(--map-hit) 38%, var(--map-land)); }
+.k.hit2 { background: color-mix(in srgb, var(--map-hit) 45%, var(--map-land)); }
 @media (hover: hover) { .locate:not(.answered) .map-svg path[data-c]:hover, .locate:not(.answered) .map-svg .dot:hover { fill: color-mix(in srgb, var(--accent) 30%, var(--map-land)); cursor: pointer; } }
 /* Lakes, rivers and mountain ranges drawn over the map */
 .map-svg .feat { vector-effect: non-scaling-stroke; pointer-events: none; }
-.map-svg .feat.lake { fill: var(--accent); stroke: var(--accent); stroke-width: 1px; }
-.map-svg .feat.river { fill: none; stroke: var(--accent); stroke-width: 3px; stroke-linecap: round; stroke-linejoin: round; }
-.map-svg .feat.range { fill: var(--accent); fill-opacity: .55; stroke: var(--accent); stroke-width: 1.5px; }
-.map-svg .feat.peak { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5px; }
-.map-svg .feat.sea { fill: var(--accent); fill-opacity: .6; stroke: var(--accent); stroke-width: 1px; }
+.map-svg .feat.lake { fill: var(--map-hit); stroke: var(--map-hit); stroke-width: 1px; }
+.map-svg .feat.river { fill: none; stroke: var(--map-hit); stroke-width: 3px; stroke-linecap: round; stroke-linejoin: round; }
+.map-svg .feat.range { fill: var(--map-hit); fill-opacity: .55; stroke: var(--map-hit); stroke-width: 1.5px; }
+.map-svg .feat.peak { fill: var(--map-hit); stroke: var(--surface); stroke-width: 1.5px; }
+.map-svg .feat.sea { fill: var(--map-hit); fill-opacity: .6; stroke: var(--map-hit); stroke-width: 1px; }
 .map-svg .feat.miss { fill: var(--bad); stroke: var(--bad); }
 .map-svg .feat.peak.miss { stroke: var(--surface); }
 .map-svg .feat.river.miss { fill: none; }

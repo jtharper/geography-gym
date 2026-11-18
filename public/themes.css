@@ -12,7 +12,7 @@
   --bg: #efe3c8; --surface: #faf3e1; --ink: #2e2216; --muted: #6f5d45; --line: #cdb98f; --track: #e2d2ad;
   --accent: #b9532c; --good: #3f6b2a; --good-bg: #e1ebcc; --bad: #a3311f; --bad-bg: #f5dccf;
   --flag-shadow: 0 1px 0 #cdb98f, 0 14px 30px -14px rgba(60, 40, 10, .55); --pop-shadow: 0 14px 40px -10px rgba(60, 40, 10, .45);
-  --map-sea: #b2cfc6; --map-land: #ecdcb2; --map-border: #9b7f52;
+  --map-sea: #b2cfc6; --map-land: #ecdcb2; --map-border: #9b7f52; --map-hit: #3d7a2a;
   --display: "Fraunces", Georgia, serif;
   color-scheme: light;
 }
