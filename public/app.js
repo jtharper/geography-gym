@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611182104";
+const VERSION = "202611182123";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -1653,10 +1653,10 @@ function showSpecial(sp) {
 }
 
 /* ---------- MULTIPLAYER (#mp-CODE): live 1v1 ----------
-   A small Cloudflare Worker (multiplayer/ in the repo, at mp.geogym.party) holds each game: its code, the two players
+   A small Cloudflare Worker (multiplayer/ in the repo, at geography-gym-multiplayer.jtharper32.workers.dev) holds each game: its code, the two players
    and their progress. Both browsers build the same questions from the seed it hands out, so it never sees the questions.
    The host picks the quiz and length in the Multiplayer menu; the other player joins with the 5-character code or link. */
-const MP_URL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? "ws://127.0.0.1:8787" : "wss://mp.geogym.party";
+const MP_URL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? "ws://127.0.0.1:8787" : "wss://geography-gym-multiplayer.jtharper32.workers.dev";
 const MP_NAME = "geography-gym-mp-name", MP_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const mpName = () => { try { return localStorage.getItem(MP_NAME) || ""; } catch (e) { return ""; } };
 const mpNewCode = () => [...crypto.getRandomValues(new Uint32Array(5))].map(x => MP_CHARS[x % MP_CHARS.length]).join("");

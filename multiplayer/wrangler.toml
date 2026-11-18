@@ -4,7 +4,7 @@ name = "geography-gym-multiplayer"
 main = "src/index.js"
 compatibility_date = "2025-06-01"
 workers_dev = true
-routes = [{ pattern = "mp.geogym.party", custom_domain = true }]
+# Served at https://geography-gym-multiplayer.jtharper32.workers.dev (the site connects there; no custom domain needed)
 
 [[durable_objects.bindings]]
 name = "ROOMS"

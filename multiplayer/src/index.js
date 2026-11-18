@@ -2,7 +2,7 @@
 // The server never sees the questions: both browsers build the same question list from the seed it hands out.
 // It only relays who joined, progress, final scores and rematches.
 //
-//   wss://mp.geogym.party/room/K7M2Q?name=Alex&host=1&topic=flags&len=10&v=<site version>
+//   wss://geography-gym-multiplayer.jtharper32.workers.dev/room/K7M2Q?name=Alex&host=1&topic=flags&len=10&v=<site version>
 //
 // Messages from a player:  {t:"start"} (host only), {t:"progress", i, right}, {t:"done", right, ms}, {t:"rematch"}
 // Messages to players:     {t:"state", ...}, {t:"start", seed, prev, game, inMs} (prev = this room's earlier seeds, so no question repeats), {t:"opp", i, right}, {t:"oppdone", right, ms},
