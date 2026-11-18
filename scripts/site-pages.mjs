@@ -16,6 +16,7 @@ export function aboutBody({ topics }) {
   <li><b>Name them</b> asks you to type every answer you can remember.</li>
   <li><b>Browse</b> is a reference list you can search.</li>
   <li>The <a href="/daily/">Daily Challenge</a> has 10 questions, the same for everyone each day, so you can compare scores with friends.</li>
+  <li><b>Medals</b>: bronze, silver and gold for learning half, most, or all of a quiz.</li>
   <li><b>Multiplayer</b> lets you race a friend live: make a game, send them the code, and you both answer the same questions at the same time.</li>
 </ul>
 
@@ -59,6 +60,9 @@ export function privacyBody() {
 
 <h2>Multiplayer</h2>
 <p>When you play Multiplayer, your browser connects to our game server (run on Cloudflare) so both players can see each other's progress. The server receives the name you type in (it can be anything; you don't have to use your real name), the game code, which quiz you picked, and your progress and score in that game. Your opponent sees your name and score. This information is used only to run the game and is deleted about an hour after both players leave. Your name is also saved in your browser so you don't have to type it again.</p>
+
+<h2>Daily Challenge leaderboard</h2>
+<p>When you finish the Daily Challenge, your score and time are added to that day's public leaderboard on our game server (run on Cloudflare). On the leaderboard you appear only under a made-up name such as "Swift Falcon", picked at random from a fixed list; you can't type your own, and you can switch to another random name. To recognise your score, your browser keeps a random player ID and sends it with your score. The leaderboard stores that ID, the made-up name, your score and your time, and deletes each day's board a few days later.</p>
 
 <h2>Photos from Wikipedia</h2>
 <p>Photos of capitals and landmarks are loaded directly from Wikipedia (Wikimedia Foundation) by your browser, so Wikimedia receives the request, including your IP address. See the <a href="https://foundation.wikimedia.org/wiki/Policy:Privacy_policy" rel="noopener">Wikimedia privacy policy</a>.</p>

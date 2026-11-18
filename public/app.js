@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611182139";
+const VERSION = "202611182201";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -283,7 +283,8 @@ function buildTopic(def) {
   if (prog.n !== n) { prog.n = n; if (Object.keys(prog.p).length) try { localStorage.setItem(`geography-gym-${def.id}-v1`, JSON.stringify(prog)); } catch (e) {} }
   // Odd one out (landlocked): the wrong choices come from countries that aren't
   const others = def.kind === "odd" ? set.rows.filter(r => !r[def.field] && r.k === "country").map(r => ({ id: r.c, label: r.n, ans: r.n, alts: r.a || [], r: r.r, sr: where(r), k: r.k, row: r })) : [];
-  return { def, items, byId, rowById, alias, img: set.img, prog, pref, others };
+  // The medal you already have, so a toast only shows when you earn a new one
+  return { def, items, byId, rowById, alias, img: set.img, prog, pref, others, medal: medalOf(def, prog), medalSeen: true };
 }
 function saveProgress() { try { localStorage.setItem(`geography-gym-${T.def.id}-v1`, JSON.stringify(T.prog)); } catch (e) {} }
 function rec(id) { return T.prog.p[id] || (T.prog.p[id] = { b: 0, s: 0, r: 0 }); }
@@ -292,7 +293,39 @@ function grade(id, ok) {
   const r = rec(id);
   if (ok) r.b = r.s === 0 ? 2 : Math.min(5, r.b + 1); else r.b = 0;
   r.s++; if (ok) r.r++; r.t = Date.now();
-  saveProgress(); updateMeter();
+  saveProgress(); updateMeter(); checkMedal();
+}
+/* ---------- medals: bronze, silver, gold for learning 50%, 80%, 100% of a quiz (best streak 10, 25, 50 for comparisons) ---------- */
+const MEDALS = [["gold", 1, 50], ["silver", 0.8, 25], ["bronze", 0.5, 10]];
+const MEDAL_RANK = { bronze: 1, silver: 2, gold: 3 };
+const learnedCount = pr => Object.values(pr.p).filter(r => r.s && r.b >= 3).length;
+function medalOf(def, pr = loadProgress(def.id)) {
+  let m;
+  if (def.kind === "compare") { const st = pr.best.streak || 0; m = MEDALS.find(x => st >= x[2]); }
+  else { const n = pr.n || 0; if (!n) return null; const l = learnedCount(pr); m = MEDALS.find(x => l >= Math.ceil(n * x[1])); }
+  return m ? m[0] : null;
+}
+// What the next medal needs, for the header ("37 more for bronze")
+function nextMedal(def, pr) {
+  const cur = MEDAL_RANK[medalOf(def, pr)] || 0, next = [...MEDALS].reverse().find(x => MEDAL_RANK[x[0]] > cur);
+  if (!next) return null;
+  const need = def.kind === "compare" ? next[2] - (pr.best.streak || 0) : Math.ceil((pr.n || 0) * next[1]) - learnedCount(pr);
+  return need > 0 ? { kind: next[0], need } : null;
+}
+const medalSVG = (kind, cls = "") => kind ? `<svg class="medal ${kind} ${cls}" viewBox="0 0 24 24" role="img" aria-label="${cap1(kind)} medal"><path class="rb1" d="M6.5 1.5h4.2l2.3 7H8.8z"/><path class="rb2" d="M17.5 1.5h-4.2l-2.3 7h4.2z"/><circle cx="12" cy="15.5" r="7"/><circle class="in" cx="12" cy="15.5" r="4.4"/></svg>` : "";
+function checkMedal() {
+  if (!T) return;
+  const m = medalOf(T.def, T.prog), was = T.medal || null;
+  T.medal = m;
+  if ((MEDAL_RANK[m] || 0) > (MEDAL_RANK[was] || 0) && T.medalSeen) toast(`${medalSVG(m, "big")}<span><b>${cap1(m)} medal!</b> ${esc(T.def.name)}${T.def.kind === "compare" ? ` · ${T.prog.best.streak} in a row` : ` · ${Math.round(100 * MEDALS.find(x => x[0] === m)[1])}% learned`}</span>`);
+  T.medalSeen = true;
+}
+let toastTimer = null;
+function toast(html) {
+  let el = $("#toast");
+  if (!el) { el = document.createElement("div"); el.id = "toast"; el.className = "toast"; el.setAttribute("role", "status"); document.body.appendChild(el); }
+  el.innerHTML = html; el.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), 3600);
 }
 const kindOk = it => T.pref.terr || it.k !== "territory";
 const pool = () => T.items.filter(it => kindOk(it) && (T.pref.region === "All" || it.r === T.pref.region));
@@ -379,7 +412,7 @@ function setPop(btn, open) {
 }
 POPS.forEach(([b, p]) => b.addEventListener("click", e => {
   e.stopPropagation();
-  if (p === menu && p.hidden) showMenuGroup(special ? SPECIAL_GROUP : T ? tabOf(T.def.group) : MENU_TABS[0]);
+  if (p === menu && p.hidden) { drawMenuMedals(); showMenuGroup(special ? SPECIAL_GROUP : T ? tabOf(T.def.group) : MENU_TABS[0]); }
   setPop(b, p.hidden);
 }));
 document.addEventListener("click", e => { if (anyOpen() && !POPS.some(([b, p]) => p.contains(e.target) || b.contains(e.target))) setPop(null, false); });
@@ -399,7 +432,8 @@ const tabOf = g => MAIN_TABS.includes(g) ? g : REGION_TAB;
 const MENU_TABS = [...MAIN_TABS, REGION_TAB, "Daily"];
 const REGIONS = GROUP_NAMES.filter(g => tabOf(g) === REGION_TAB);
 let menuGroup = MENU_TABS[0], menuRegion = REGIONS[0];
-const topicLink = t => `<a href="#${t.id}-practice" data-topic="${t.id}">${esc(t.short || t.name)}${CHECK}</a>`;
+const topicLink = t => `<a href="#${t.id}-practice" data-topic="${t.id}"><span class="tl">${esc(t.short || t.name)}<span class="mslot" data-medal="${t.id}"></span></span>${CHECK}</a>`;
+function drawMenuMedals() { document.querySelectorAll("#topicList [data-medal]").forEach(el => { el.innerHTML = medalSVG(medalOf(TOPIC[el.dataset.medal]), "sm"); }); }
 function renderTopicMenu() {
   $("#menuTabs").innerHTML = MENU_TABS.map(g => `<button type="button" role="tab" data-group="${esc(g)}" aria-selected="${g === menuGroup}">${esc(g)}</button>`).join("");
   const hid = tab => tab === menuGroup ? "" : " hidden";
@@ -495,7 +529,7 @@ function updateMeter() {
   $("#meterFill").parentElement.hidden = false;
   if (T.def.kind === "compare") {
     const best = T.prog.best.streak || 0;
-    $("#meterText").innerHTML = `Best streak <b>${best}</b>`;
+    $("#meterText").innerHTML = `${medalSVG(medalOf(T.def, T.prog), "sm")}Best streak <b>${best}</b>`;
     $("#meterFill").style.width = Math.min(100, best * 5) + "%";
     return;
   }
@@ -503,7 +537,9 @@ function updateMeter() {
   if (T.prog.n !== all) { T.prog.n = all; saveProgress(); } // shown on the stats page
   const P = pool(); let m = 0;
   P.forEach(it => { if (status(it.id) === "mastered") m++; });
-  $("#meterText").innerHTML = `<b>${m}</b> of ${P.length} ${esc(T.def.unit)} learned`;
+  const nx = nextMedal(T.def, T.prog);
+  $("#meterText").innerHTML = `${medalSVG(medalOf(T.def, T.prog), "sm")}<b>${m}</b> of ${P.length} ${esc(T.def.unit)} learned`;
+  $("#meterText").title = nx ? `${nx.need} more learned for ${nx.kind}` : "Gold medal: everything learned";
   $("#meterFill").style.width = (100 * m / Math.max(1, P.length)) + "%";
 }
 
@@ -1114,7 +1150,7 @@ const practice = (() => {
       onAnswer(ok) {
         done = true; streak = ok ? streak + 1 : 0;
         if (isRound() && round) { if (!ok) round.missed.push(q.it.id); saveRound(); }
-        if (isCompare) { if (streak > (T.prog.best.streak || 0)) { T.prog.best.streak = streak; saveProgress(); } updateMeter(); }
+        if (isCompare) { if (streak > (T.prog.best.streak || 0)) { T.prog.best.streak = streak; saveProgress(); } updateMeter(); checkMedal(); }
         else grade(q.it.id, ok);
       },
       onNext: next
@@ -1571,8 +1607,11 @@ const daily = {
       <div class="marks" aria-label="${r.s} right, ${r.n - r.s} wrong">${r.m.split("").map(c => `<span class="${c === "1" ? "ok" : "bad"}"></span>`).join("")}</div>
       <p>${fmtTime(r.t)}${streak ? ` · ${streak}-day streak` : ""}. A new challenge comes out at midnight.</p>
       <div class="share-row" id="dShareRow"></div>
-    </div>${list ? resultList(list, r.m.split("").map(c => c === "1")) : ""}`;
+    </div>
+    <section class="board" id="dBoard" aria-live="polite"><h2>Today's leaderboard</h2><p class="muted">Loading…</p></section>
+    ${list ? resultList(list, r.m.split("").map(c => c === "1")) : ""}`;
     shareButtons($("#dShareRow"), { text: shareText(day, r), card: () => shareImage(day, r), url: location.origin + "/daily/" });
+    leaderboard(day, r);
   }
 };
 
@@ -1628,11 +1667,13 @@ const stats = {
   show() {
     specialMeter();
     let learned = 0, answers = 0, right = 0, started = 0;
+    const medals = { gold: 0, silver: 0, bronze: 0 };
     const rows = {};
     TOPICS.forEach(def => {
-      const pr = loadProgress(def.id), recs = Object.values(pr.p);
+      const pr = loadProgress(def.id), recs = Object.values(pr.p), md = medalOf(def, pr);
+      if (md) medals[md]++;
       if (def.kind === "compare") {
-        if (pr.best.streak) { started++; (rows[def.group] = rows[def.group] || []).push(`<a class="stat-row" href="#${def.id}-practice"><span class="nm">${esc(def.name)}</span><span class="sbar"><span style="width:${Math.min(100, pr.best.streak * 5)}%"></span></span><span class="num">Best streak ${pr.best.streak}</span><span class="acc"></span></a>`); }
+        if (pr.best.streak) { started++; (rows[def.group] = rows[def.group] || []).push(`<a class="stat-row" href="#${def.id}-practice"><span class="nm">${medalSVG(md, "sm")}${esc(def.name)}</span><span class="sbar"><span style="width:${Math.min(100, pr.best.streak * 5)}%"></span></span><span class="num">Best streak ${pr.best.streak}</span><span class="acc"></span></a>`); }
         return;
       }
       if (!recs.some(r => r.s)) return;
@@ -1640,12 +1681,14 @@ const stats = {
       const l = recs.filter(r => r.s && r.b >= 3).length, s = recs.reduce((a, r) => a + (r.s || 0), 0), ok = recs.reduce((a, r) => a + (r.r || 0), 0);
       const total = Math.max(pr.n || 0, l);
       learned += l; answers += s; right += ok;
-      (rows[def.group] = rows[def.group] || []).push(`<a class="stat-row" href="#${def.id}-practice"><span class="nm">${esc(def.name)}</span><span class="sbar"><span style="width:${pct(l, total)}%"></span></span><span class="num">${l}${total ? ` / ${total}` : ""} learned</span><span class="acc">${pct(ok, s)}% right</span></a>`);
+      (rows[def.group] = rows[def.group] || []).push(`<a class="stat-row" href="#${def.id}-practice"><span class="nm">${medalSVG(md, "sm")}${esc(def.name)}</span><span class="sbar"><span style="width:${pct(l, total)}%"></span></span><span class="num">${l}${total ? ` / ${total}` : ""} learned</span><span class="acc">${pct(ok, s)}% right</span></a>`);
     });
     const log = dailyLog(), days = Object.values(log);
     const tile = (v, k) => `<div class="tile-stat"><b>${v}</b><span>${k}</span></div>`;
     sHost().innerHTML = `<div class="stats">
       <h1>Your stats</h1>
+      <div class="medal-row" aria-label="Medals">${["gold", "silver", "bronze"].map(k => `<span>${medalSVG(k, "big")}<b>${medals[k]}</b> ${k}</span>`).join("")}</div>
+      <p class="muted">Bronze for learning half of a quiz, silver for 80%, gold for all of it. For Bigger or smaller and More or fewer people: 10, 25 or 50 right in a row.</p>
       <div class="tiles-row">${tile(learned, "learned")}${tile(answers, "answers")}${tile(answers ? pct(right, answers) + "%" : "–", "right")}${tile(dailyStreak(log), "day streak")}</div>
       ${days.length ? `<p class="muted">${days.length} daily ${days.length === 1 ? "challenge" : "challenges"} played, ${(days.reduce((a, d) => a + d.s, 0) / days.length).toFixed(1)} right on average.</p>` : ""}
       ${started ? GROUP_NAMES.filter(g => rows[g]).map(g => `<h2>${esc(g)}</h2><div class="stat-rows">${rows[g].join("")}</div>`).join("") : `<p class="muted">No progress yet. Pick a topic from the menu and your stats will show up here.</p>`}
@@ -1653,6 +1696,50 @@ const stats = {
     </div>`;
   }
 };
+/* Daily leaderboard (on the same Cloudflare Worker as Multiplayer). Everyone appears under a made-up name from these lists,
+   which must match multiplayer/src/names.js (the server only accepts those names), so nothing typed ever shows publicly. */
+const boardUrl = () => MP_URL.replace(/^ws/, "http") + "/daily/"; // MP_URL is set further down
+const BOARD_ADJ = ["Swift", "Brave", "Clever", "Curious", "Daring", "Eager", "Gentle", "Happy", "Jolly", "Keen", "Lucky", "Mighty", "Nimble",
+  "Plucky", "Quick", "Sunny", "Bold", "Bright", "Calm", "Cosmic", "Dashing", "Fearless", "Golden", "Hidden", "Merry", "Noble", "Polar",
+  "Rapid", "Roaming", "Silver", "Snowy", "Speedy", "Steady", "Stormy", "Trusty", "Wandering", "Wild", "Wise", "Zesty", "Breezy"];
+const BOARD_ANIMAL = ["Falcon", "Okapi", "Panda", "Koala", "Llama", "Otter", "Puffin", "Toucan", "Gecko", "Lynx", "Narwhal", "Penguin",
+  "Kiwi", "Jaguar", "Bison", "Camel", "Dolphin", "Eagle", "Fennec", "Gazelle", "Hedgehog", "Ibex", "Kangaroo", "Lemur", "Meerkat",
+  "Orca", "Pelican", "Quokka", "Raccoon", "Sloth", "Tapir", "Walrus", "Yak", "Zebra", "Alpaca", "Beaver", "Capybara", "Moose", "Owl", "Tiger"];
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+function playerId() { let id = lsGet("geography-gym-player-id"); if (!id) { id = crypto.randomUUID(); lsSet("geography-gym-player-id", id); } return id; }
+const randomBoardName = () => `${pick(BOARD_ADJ)} ${pick(BOARD_ANIMAL)}`;
+function boardName() { let n = lsGet("geography-gym-board-name"); if (!n || !BOARD_ADJ.includes(n.split(" ")[0]) || !BOARD_ANIMAL.includes(n.split(" ")[1])) { n = randomBoardName(); lsSet("geography-gym-board-name", n); } return n; }
+async function boardCall(day, body) {
+  const r = await fetch(boardUrl() + day + (body ? "" : `?id=${encodeURIComponent(playerId())}`), body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : {});
+  if (!r.ok) { const e = new Error("board"); e.status = r.status; throw e; }
+  return r.json();
+}
+async function leaderboard(day, r) {
+  const el = $("#dBoard"); if (!el) return;
+  let data;
+  const markSent = () => { const lg = dailyLog(); if (lg[day]) { lg[day].sent = true; r.sent = true; try { localStorage.setItem(DKEY, JSON.stringify(lg)); } catch (e) {} } };
+  try {
+    // Your score goes in once (first try of the day); after that the board is only read, or your name changed.
+    // A score the server refuses (say, impossibly fast) is just left off; the board still shows.
+    if (!r.sent) { try { data = await boardCall(day, { id: playerId(), name: boardName(), s: r.s, t: r.t, m: r.m }); markSent(); } catch (e) { if (e.status !== 400) throw e; markSent(); } }
+    if (!data) data = await boardCall(day);
+  } catch (e) { if (el.isConnected) el.innerHTML = `<h2>Today's leaderboard</h2><p class="muted">The leaderboard isn't available right now. Your score is saved here; check back later.</p>`; return; }
+  if (el.isConnected) drawBoard(el, day, r, data);
+}
+function drawBoard(el, day, r, data) {
+  const row = x => `<li class="${x.me ? "me" : ""}"><span class="rk">${x.rank}</span><span class="nm">${esc(x.name)}${x.me ? " <small>(you)</small>" : ""}</span><span class="sc">${x.s}/10</span><span class="tm">${fmtTime(x.t)}</span></li>`;
+  const me = data.me, inTop = data.top.some(x => x.me);
+  el.innerHTML = `<h2>Today's leaderboard</h2>
+    ${me ? `<p class="board-me">You're <b>#${me.rank}</b> of ${data.total} ${data.total === 1 ? "player" : "players"} today, as <b>${esc(me.name)}</b> <button type="button" class="link-btn" id="dRename">New name</button></p>` : ""}
+    <ol class="board-list">${data.top.map(row).join("")}${me && !inTop ? `<li class="gap" aria-hidden="true">…</li>${row({ ...me, me: true })}` : ""}</ol>
+    <p class="muted">Everyone gets a made-up name. The first try of the day counts; a new board starts at midnight.</p>`;
+  const rn = $("#dRename");
+  if (rn) rn.addEventListener("click", async () => {
+    rn.disabled = true; lsSet("geography-gym-board-name", randomBoardName());
+    try { drawBoard(el, day, r, await boardCall(day, { id: playerId(), name: boardName(), s: r.s, t: r.t, m: r.m })); } catch (e) { rn.disabled = false; }
+  });
+}
 const SPECIALS = [
   { id: "daily", name: "Daily challenge", view: daily },
   { id: "review", name: "Review weak spots", view: review },

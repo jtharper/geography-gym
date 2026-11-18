@@ -1,4 +1,4 @@
-# GeoGym live 1v1 server: one Durable Object ("Room") per game code, talking to both players over WebSockets.
+# GeoGym server: live 1v1 (one "Room" Durable Object per game code, WebSockets) and the Daily leaderboard (one "Board" per date).
 # Deployed separately from the site (Cloudflare Workers Builds, root directory "multiplayer"). See README.md.
 name = "geography-gym-multiplayer"
 main = "src/index.js"
@@ -10,6 +10,14 @@ workers_dev = true
 name = "ROOMS"
 class_name = "Room"
 
+[[durable_objects.bindings]]
+name = "BOARDS"
+class_name = "Board"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Room"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Board"]
