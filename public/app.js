@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611181741";
+const VERSION = "202611181759";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -930,6 +930,8 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
     if (qph) qph.hidden = true; // the photo moves next to the map, with its name and a Wikipedia link
     // Only the right answer (and a wrong pick) stay on screen; the other choices make room for the map
     host.querySelectorAll(".answers .dim, .flag-answers .dim").forEach(b => { b.hidden = true; });
+    // Right answer: no boxes at all, the result line says it ("Correct, it's …")
+    if (ok) host.querySelectorAll(".answers, .flag-answers, .type-row").forEach(el => { el.hidden = true; });
     const p = picked && !(ok && picked === it.id) ? picked : null;
     const pLabel = p && ((q.labels && q.labels[p]) || (def.set === "trivia" && T.byId[p] ? T.byId[p].ans : nameOf(p)));
     const mid = x => (T.byId[x] && T.byId[x].mid) || x; // trivia items show their country on the map

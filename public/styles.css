@@ -148,7 +148,7 @@ main { flex: 1; display: flex; flex-direction: column; align-items: center; padd
 .answer.right { border-color: var(--good); background: var(--good-bg); color: var(--good); }
 .answer.wrong { border-color: var(--bad); background: var(--bad-bg); color: var(--bad); }
 .answer.dim { opacity: .45; }
-.answers [hidden], .flag-answers [hidden] { display: none !important; }
+.answers [hidden], .flag-answers [hidden], .q-stack .answers[hidden], .q-stack .flag-answers[hidden], .q-stack .type-row[hidden] { display: none !important; }
 .q-stack.answered .answers, .q-stack.answered .flag-answers { display: flex; justify-content: center; }
 .q-stack.answered .answers .answer { flex: 0 1 260px; min-width: 0; }
 .q-stack.answered .flag-answers .flag-answer { flex: 0 1 200px; min-width: 0; }
