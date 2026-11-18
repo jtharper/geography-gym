@@ -11,7 +11,7 @@ import { Resvg } from '@resvg/resvg-js';
 import { COPY } from './topic-copy.mjs';
 import { logoSVG, MARK } from './logo.mjs';
 
-const SITE = 'https://geographyquiz.party';
+const SITE = 'https://geogym.party';
 const read = f => JSON.parse(fs.readFileSync('public/' + f, 'utf8'));
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -285,7 +285,7 @@ function card(file, { title, sub, art }) {
 <text x="128" y="96" font-weight="800" font-size="36" fill="${C.ink}">GeoGym</text>
 ${lines.map((l, i) => `<text x="64" y="${top + 60 + i * (ts + 8)}" font-weight="800" font-size="${ts}" fill="${C.ink}" letter-spacing="-1.2">${esc(l)}</text>`).join('')}
 ${subLines.map((l, i) => `<text x="64" y="${top + 60 + lines.length * (ts + 8) + 22 + i * 38}" font-weight="600" font-size="28" fill="${C.muted}">${esc(l)}</text>`).join('')}
-<text x="64" y="566" font-weight="700" font-size="28" fill="${C.accent}">geographyquiz.party</text>
+<text x="64" y="566" font-weight="700" font-size="28" fill="${C.accent}">geogym.party</text>
 ${art}
 </svg>`;
   const png = new Resvg(svg, { font: { fontFiles: ['scripts/fonts/manrope-600.ttf', 'scripts/fonts/manrope-700.ttf', 'scripts/fonts/manrope-800.ttf'], loadSystemFonts: false, defaultFontFamily: 'Manrope' } }).render().asPng();

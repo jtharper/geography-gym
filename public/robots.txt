@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://geographyquiz.party/sitemap.xml
+Sitemap: https://geogym.party/sitemap.xml

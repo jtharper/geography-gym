@@ -2,9 +2,9 @@
 
 GeoGym (Geography Gym) is a set of free geography quizzes.
 
-https://geographyquiz.party/
+https://geogym.party/
 
-Browser geography quizzes, live at [geographyquiz.party](https://geographyquiz.party). It's a plain static site with no framework and no build step. Everything the browser loads is in `public/`.
+Browser geography quizzes, live at [geogym.party](https://geogym.party). It's a plain static site with no framework and no build step. Everything the browser loads is in `public/`.
 
 ## Topics
 
@@ -73,7 +73,7 @@ On phones, the Daily challenge **Share** button also attaches a picture of your 
 
 The words for each topic page live in `scripts/topic-copy.mjs`. The page addresses are in `SLUG` in `scripts/build-pages.mjs`: don't change one after it's live, or search engines lose it.
 
-To get the pages into Google, add the site to [Google Search Console](https://search.google.com/search-console) and submit `https://geographyquiz.party/sitemap.xml`.
+To get the pages into Google, add the site to [Google Search Console](https://search.google.com/search-console) and submit `https://geogym.party/sitemap.xml`.
 
 ## Project layout
 
