@@ -70,7 +70,6 @@ h1, h2, h3 { margin: 0; line-height: 1.2; text-wrap: balance; }
 .icon-btn, .menu-btn { height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); display: inline-flex; align-items: center; justify-content: center; }
 .icon-btn { width: 44px; }
 .icon-btn svg { width: 19px; height: 19px; fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-:root[data-theme="dark"] .i-moon, :root:not([data-theme="dark"]) .i-sun { display: none; }
 .menu-btn { gap: 8px; padding: 0 14px 0 16px; font-size: 15px; font-weight: 700; }
 .menu-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
 .menu-btn[aria-expanded="true"] svg { transform: rotate(180deg); }
@@ -522,7 +521,7 @@ body.special #modeNav, body.special .gear-wrap { display: none; }
   body.fit .map-thumb .flag { width: 100%; height: auto; display: block; border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, .3); }
 }
 
-/* Phones: one clean header row: logo, topic button, look, settings. No progress bar (it's on the Stats page). */
+/* Phones: one clean header row: logo, topic button, settings. No progress bar (it's on the Stats page). */
 @media (max-width: 640px) {
   .top { flex-wrap: nowrap; align-items: center; gap: 8px; padding: 12px 14px 6px; }
   .top .logo { margin-right: 0; flex: none; }
@@ -530,11 +529,10 @@ body.special #modeNav, body.special .gear-wrap { display: none; }
   .top .logo-mark { width: 40px; height: 40px; border-radius: 11px; }
   .top .progress-mini { display: none; }
   .top .topic-wrap { order: 1; flex: 1 1 auto; min-width: 0; width: auto; }
-  .top .look-wrap { order: 2; }
   .top .gear-wrap { order: 3; }
   .top .menu-btn { height: 44px; width: 100%; min-width: 0; }
   .top #menuLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-  .menu, .look { position: fixed; left: 12px; right: 12px; top: 64px; width: auto; }
+  .menu { position: fixed; left: 12px; right: 12px; top: 64px; width: auto; }
   .panel { top: 64px; }
   .modes { margin-top: 2px; }
 }

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-skin="explorer" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -21,20 +21,11 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
-<meta name="theme-color" content="#15171c">
-<script>
-  try {
-    var t = localStorage.getItem("geography-gym-theme");
-    if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    document.documentElement.dataset.theme = t;
-    var SK = { pop: "light", arcade: "dark", explorer: "light", tropical: "light", chalk: "dark" }, k = localStorage.getItem("geography-gym-look");
-    if (SK[k]) { document.documentElement.dataset.skin = k; document.documentElement.dataset.theme = SK[k]; }
-    else if (k === "clean" || k === "clean-dark") document.documentElement.dataset.theme = k === "clean" ? "light" : "dark";
-  } catch (e) {}
-</script>
-<link rel="stylesheet" href="/styles.css?v=202611181812">
-<link rel="stylesheet" href="/themes.css?v=202611181812">
-<link rel="stylesheet" href="/pages.css?v=202611181812">
+<meta name="theme-color" content="#efe3c8">
+
+<link rel="stylesheet" href="/styles.css?v=202611181814">
+<link rel="stylesheet" href="/themes.css?v=202611181814">
+<link rel="stylesheet" href="/pages.css?v=202611181814">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"German flags quiz","description":"Free German state flags quiz: learn the flag of every one of Germany's 16 states.","url":"https://geogym.party/germany-state-flags-quiz/","isPartOf":{"@type":"WebSite","name":"GeoGym","alternateName":"Geography Gym","url":"https://geogym.party/"}}</script>
 </head>
 <body class="page">

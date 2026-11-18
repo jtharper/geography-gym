@@ -113,21 +113,12 @@ function reference(t, rows) {
 }
 
 /* ---------- page shell ---------- */
-const THEME_SCRIPT = `<script>
-  try {
-    var t = localStorage.getItem("geography-gym-theme");
-    if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    document.documentElement.dataset.theme = t;
-    var SK = { pop: "light", arcade: "dark", explorer: "light", tropical: "light", chalk: "dark" }, k = localStorage.getItem("geography-gym-look");
-    if (SK[k]) { document.documentElement.dataset.skin = k; document.documentElement.dataset.theme = SK[k]; }
-    else if (k === "clean" || k === "clean-dark") document.documentElement.dataset.theme = k === "clean" ? "light" : "dark";
-  } catch (e) {}
-</script>`;
+const THEME_SCRIPT = ''; // one look (Explorer) everywhere, set on <html>
 const LOGO = `<img class="logo-mark" src="/logo.svg" alt="" width="30" height="30">`;
 function page({ path, title, description, card, body, jsonld, noindex, extraHead = '' }) {
   const url = SITE + path;
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-skin="explorer" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -149,7 +140,7 @@ ${noindex ? '<meta name="robots" content="noindex">\n' : ''}<meta property="og:t
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
-<meta name="theme-color" content="#15171c">
+<meta name="theme-color" content="#efe3c8">
 ${THEME_SCRIPT}
 <link rel="stylesheet" href="/styles.css?v=${VERSION}">
 <link rel="stylesheet" href="/themes.css?v=${VERSION}">

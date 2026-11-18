@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-skin="explorer" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -21,23 +21,11 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
-<meta name="theme-color" content="#15171c">
+<meta name="theme-color" content="#efe3c8">
 <link rel="preload" href="fonts/manrope-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
-<script>
-  try {
-    var t = localStorage.getItem("geography-gym-theme") || localStorage.getItem("flag-atlas-theme");
-    if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    document.documentElement.dataset.theme = t;
-    // Look: ?look=pop in the address wins, then the saved one
-    var SK = { pop: "light", arcade: "dark", explorer: "light", tropical: "light", chalk: "dark" };
-    var q = (location.search.match(/[?&]look=([a-z]+)/) || [])[1];
-    var k = q || localStorage.getItem("geography-gym-look");
-    if (SK[k]) { document.documentElement.dataset.skin = k; document.documentElement.dataset.theme = SK[k]; }
-    else if (k === "clean" || k === "clean-dark") document.documentElement.dataset.theme = k === "clean" ? "light" : "dark";
-  } catch (e) {}
-</script>
-<link rel="stylesheet" href="styles.css?v=202611181812">
-<link rel="stylesheet" href="themes.css?v=202611181812">
+<link rel="preload" href="fonts/fraunces-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css?v=202611181814">
+<link rel="stylesheet" href="themes.css?v=202611181814">
 </head>
 <body>
 <header class="top">
@@ -49,15 +37,6 @@
     <div class="progress-mini" aria-live="polite">
       <span id="meterText"><b>0</b> learned</span>
       <span class="bar"><span id="meterFill"></span></span>
-    </div>
-    <div class="pop-wrap look-wrap">
-      <button class="icon-btn" id="themeBtn" type="button" aria-label="Change the look" aria-expanded="false" aria-controls="lookPanel">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7.2" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg>
-      </button>
-      <div class="pop look" id="lookPanel" hidden>
-        <div class="look-title">Look</div>
-        <div class="looks" id="looks"></div>
-      </div>
     </div>
     <div class="pop-wrap gear-wrap">
       <button class="icon-btn" id="setBtn" type="button" aria-label="Settings" aria-expanded="false" aria-controls="setPanel">
@@ -130,6 +109,6 @@
     <div id="browseBody"></div>
   </section>
 </main>
-<script src="app.js?v=202611181812"></script>
+<script src="app.js?v=202611181814"></script>
 </body>
 </html>
