@@ -8,7 +8,7 @@ Browser geography quizzes, live at [geogym.party](https://geogym.party). It's a 
 
 ## Topics
 
-Pick a topic from the menu at the top right. Topics are grouped by tabs.
+Pick a topic from the menu at the top right. Topics are grouped into five tabs: World, Trivia, Nature, Regions (the United States, Canada, Australia, Germany and Mexico, each under its own header) and Daily.
 
 **World**
 - **Country flags**: 197 countries (the 193 UN members plus Kosovo, Palestine, Taiwan and Vatican City), plus an optional 35 territories.
@@ -38,7 +38,7 @@ Pick a topic from the menu at the top right. Topics are grouped by tabs.
 **Canada, Australia, Germany and Mexico**
 - Flags (Canada, Australia, Germany), capitals, find on the map and shapes for every province, state and territory. Canada and Australia also have abbreviations. Mexico's states have no official flags, so Mexico has no flag topic.
 
-**Daily & stats**
+**Daily**
 - **Daily challenge**: 10 questions from 10 different topics, the same for everyone each day. When you finish, **Copy result** copies a short score you can paste anywhere. Your daily streak is shown at the top.
 - **Review weak spots**: everything you've gotten wrong in any topic, until you get it right twice.
 - **Your stats**: how much you've learned in each topic, how often you're right, and your daily streak.

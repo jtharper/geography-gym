@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611181700";
+const VERSION = "202611181726";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -69,17 +69,17 @@ const TOPICS = [
   { id: "seas", group: "Nature", name: "Seas and straits", unit: "seas and straits", set: "nature", kind: "feature", type: "sea", regions: WORLD_REGIONS, terr: false,
     styles: ["choice", "type"], ask: "Which sea or strait is highlighted?", typeHolder: "Type the sea, gulf or strait", modes: PQB },
 
-  { id: "state-flags", group: "United States", name: "State flags", unit: "state flags", set: "states", kind: "flag", regions: US_REGIONS, terr: false,
+  { id: "state-flags", group: "United States", short: "Flags", name: "State flags", unit: "state flags", set: "states", kind: "flag", regions: US_REGIONS, terr: false,
     styles: ["choice", "type", "reverse"], ask: "Which state is this?", find: "Find the flag of", typeHolder: "Type the state", nameHint: "Type every state you can think of." },
-  { id: "state-capitals", group: "United States", name: "State capitals", unit: "state capitals", set: "states", kind: "fact", field: "cap", regions: US_REGIONS, terr: false,
+  { id: "state-capitals", group: "United States", short: "Capitals", name: "State capitals", unit: "state capitals", set: "states", kind: "fact", field: "cap", regions: US_REGIONS, terr: false,
     styles: ["choice", "type"], ask: "What's the capital?", typeHolder: "Type the capital", nameHint: "Type every state capital you can think of." },
-  { id: "state-map", group: "United States", name: "Find states on the map", unit: "states", set: "states", kind: "locate", regions: US_REGIONS, terr: false,
+  { id: "state-map", group: "United States", short: "Find on the map", name: "Find states on the map", unit: "states", set: "states", kind: "locate", regions: US_REGIONS, terr: false,
     styles: ["map"], ask: "Find", modes: ["practice", "quiz"] },
-  { id: "state-shapes", group: "United States", name: "State shapes", unit: "shapes", set: "states", kind: "shape", regions: US_REGIONS, terr: false,
+  { id: "state-shapes", group: "United States", short: "Shapes", name: "State shapes", unit: "shapes", set: "states", kind: "shape", regions: US_REGIONS, terr: false,
     styles: ["choice", "type"], ask: "Which state has this shape?", typeHolder: "Type the state", nameHint: "Name every state from its outline." },
-  { id: "state-abbr", group: "United States", name: "State abbreviations", unit: "abbreviations", set: "states", kind: "text", field: "code", regions: US_REGIONS, terr: false,
+  { id: "state-abbr", group: "United States", short: "Abbreviations", name: "State abbreviations", unit: "abbreviations", set: "states", kind: "text", field: "code", regions: US_REGIONS, terr: false,
     styles: ["choice", "type"], ask: "Which state is this?", typeHolder: "Type the state", nameHint: "Type the state for every abbreviation." },
-  { id: "state-nicknames", group: "United States", name: "State nicknames", unit: "nicknames", set: "states", kind: "text", field: "nick", regions: US_REGIONS, terr: false,
+  { id: "state-nicknames", group: "United States", short: "Nicknames", name: "State nicknames", unit: "nicknames", set: "states", kind: "text", field: "nick", regions: US_REGIONS, terr: false,
     styles: ["choice", "type"], ask: "Which state is this?", typeHolder: "Type the state", nameHint: "Type the state for every nickname." }
 ];
 // Provinces and states of other countries: same engine, one set per country
@@ -394,7 +394,7 @@ function setPop(btn, open) {
 }
 POPS.forEach(([b, p]) => b.addEventListener("click", e => {
   e.stopPropagation();
-  if (p === menu && p.hidden) showMenuGroup(special ? SPECIAL_GROUP : T ? T.def.group : GROUP_NAMES[0]);
+  if (p === menu && p.hidden) showMenuGroup(special ? SPECIAL_GROUP : T ? tabOf(T.def.group) : MENU_TABS[0]);
   setPop(b, p.hidden);
 }));
 document.addEventListener("click", e => { if (anyOpen() && !POPS.some(([b, p]) => p.contains(e.target) || b.contains(e.target))) setPop(null, false); });
@@ -405,19 +405,31 @@ document.addEventListener("keydown", e => {
 menu.addEventListener("click", e => { if (e.target.closest("a[href^='#']")) setPop(null, false); });
 
 const CHECK = `<svg class="chk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
-// Topic menu: a row of group tabs, then the topics of one group (keeps the list short)
+// Topic menu: five tabs (World, Trivia, Nature, Regions, Daily), then that tab's topics.
+// Regions holds the US/Canada/Australia/Germany/Mexico groups, each under its own header.
 const GROUP_NAMES = [...new Set(TOPICS.map(t => t.group)), "Daily & stats"];
-let menuGroup = GROUP_NAMES[0];
+const MAIN_TABS = ["World", "Trivia", "Nature"], REGION_TAB = "Regions";
+const tabOf = g => MAIN_TABS.includes(g) ? g : REGION_TAB;
+const MENU_TABS = [...MAIN_TABS, REGION_TAB, "Daily"];
+let menuGroup = MENU_TABS[0];
 function renderTopicMenu() {
-  $("#menuTabs").innerHTML = GROUP_NAMES.map(g => `<button type="button" role="tab" data-group="${esc(g)}" aria-selected="${g === menuGroup}">${esc(g)}</button>`).join("");
-  $("#topicList").innerHTML = TOPICS.map(t => `<a href="#${t.id}-practice" data-topic="${t.id}" data-group="${esc(t.group)}"${t.group === menuGroup ? "" : " hidden"}>${esc(t.short || t.name)}${CHECK}</a>`).join("") +
-    SPECIALS.map(x => `<a href="#${x.id}" data-special="${x.id}" data-group="${SPECIAL_GROUP}"${menuGroup === SPECIAL_GROUP ? "" : " hidden"}>${esc(x.name)}${CHECK}</a>`).join("");
+  $("#menuTabs").innerHTML = MENU_TABS.map(g => `<button type="button" role="tab" data-group="${esc(g)}" aria-selected="${g === menuGroup}">${esc(g)}</button>`).join("");
+  const hid = tab => tab === menuGroup ? "" : " hidden";
+  let last = "";
+  $("#topicList").innerHTML = TOPICS.map(t => {
+    const tab = tabOf(t.group), head = tab === REGION_TAB && t.group !== last ? `<div class="menu-group" data-tab="${tab}"${hid(tab)}>${esc(t.group)}</div>` : "";
+    last = t.group;
+    return head + `<a href="#${t.id}-practice" data-topic="${t.id}" data-tab="${esc(tab)}"${hid(tab)}>${esc(t.short || t.name)}${CHECK}</a>`;
+  }).join("") +
+    SPECIALS.map(x => `<a href="#${x.id}" data-special="${x.id}" data-tab="${SPECIAL_GROUP}"${hid(SPECIAL_GROUP)}>${esc(x.name)}${CHECK}</a>`).join("");
+  $("#topicList").dataset.tab = menuGroup;
   if (T) syncTopicLinks();
 }
 function showMenuGroup(g) {
   menuGroup = g;
   $("#menuTabs").querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", b.dataset.group === g));
-  $("#topicList").querySelectorAll("a").forEach(a => { a.hidden = a.dataset.group !== g; });
+  $("#topicList").querySelectorAll("[data-tab]").forEach(a => { a.hidden = a.dataset.tab !== g; });
+  $("#topicList").dataset.tab = g;
 }
 $("#menuTabs").addEventListener("click", e => { const b = e.target.closest("[data-group]"); if (b) showMenuGroup(b.dataset.group); });
 
@@ -1532,7 +1544,7 @@ const SPECIALS = [
   { id: "review", name: "Review weak spots", view: review },
   { id: "stats", name: "Your stats", view: stats }
 ];
-const SPECIAL_GROUP = "Daily & stats";
+const SPECIAL_GROUP = "Daily";
 function specialMeter() {
   const set = (html, w) => { $("#meterText").innerHTML = html; $("#meterFill").parentElement.hidden = w == null; $("#meterFill").style.width = (w || 0) + "%"; };
   if (special === "daily") { const s = dailyStreak(); set(s ? `<b>${s}</b>-day streak` : "No streak yet", Math.min(100, s * 100 / 7)); }
