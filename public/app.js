@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611181618";
+const VERSION = "202611181625";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -832,6 +832,7 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
   }
   h += `<div class="below">${below}</div><div class="fb"></div></div>`;
   host.innerHTML = h;
+  document.body.classList.remove("fit");
   const stack = host.querySelector(".q-stack"), belowEl = host.querySelector(".below"), fbEl = host.querySelector(".fb");
 
   if (q.style === "map") {
@@ -862,6 +863,8 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
       fastTimer = setTimeout(() => { if (stack.isConnected) goNext(); }, ok ? 250 : 900);
       return;
     }
+    // Phones: the answered question fits one screen (question hidden, map fills the space; see body.fit in styles.css)
+    stack.classList.add("answered"); document.body.classList.add("fit");
     const p = picked && !(ok && picked === it.id) ? picked : null;
     const pLabel = p && ((q.labels && q.labels[p]) || (def.set === "trivia" && T.byId[p] ? T.byId[p].ans : nameOf(p)));
     const mid = x => (T.byId[x] && T.byId[x].mid) || x; // trivia items show their country on the map
@@ -930,7 +933,9 @@ function renderQuestion(host, q, { top = "", below = "", onAnswer, onNext, nextL
       };
       if (mapCtl) apply(mapCtl); else setTimeout(() => apply(mapCtl), 300);
     } else {
-      const mapFig = `<figure class="map" data-map>${MAP_CONTROLS}<figcaption class="map-key">${keyHTML}</figcaption></figure>`;
+      // On phones the question's flag moves into the corner of the map
+      const thumb = T.img[it.id] && q.style !== "reverse" && ["flag", "fact", "neighbors"].includes(def.kind) ? `<div class="map-thumb">${img(it.id, "")}</div>` : "";
+      const mapFig = `<figure class="map" data-map>${MAP_CONTROLS}${thumb}<figcaption class="map-key">${keyHTML}</figcaption></figure>`;
       const photo = hasPhoto(def);
       fbEl.innerHTML = resultRow + (photo ? `<div class="media">${mapFig}<figure class="cap-photo loading"><img alt="${esc(it.cap || it.label)}"><figcaption><b>${esc(it.cap || it.label)}</b><a target="_blank" rel="noopener">Wikipedia</a></figcaption></figure></div>` : mapFig) + tip;
       if (photo) {
@@ -1547,6 +1552,7 @@ function loadSet(name) {
 const needsMap = def => def.kind === "shape" || def.kind === "locate" || def.kind === "feature";
 let routeToken = 0;
 async function route() {
+  document.body.classList.remove("fit");
   const sp = SPECIALS.find(x => x.id === location.hash.slice(1));
   if (sp) return showSpecial(sp);
   if (special) { special = null; specialCtl = null; document.body.classList.remove("special"); }
