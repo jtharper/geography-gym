@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611182306";
+const VERSION = "202611191424";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------

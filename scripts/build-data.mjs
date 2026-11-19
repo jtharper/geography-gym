@@ -465,7 +465,7 @@ const LANDMARKS = [
   ['Kaaba', 'SA'], ['Sheikh Zayed Grand Mosque', 'AE'], ['Abu Simbel', 'EG', 'Abu Simbel temples'], ['Valley of the Kings', 'EG'],
   ['Rock-hewn churches of Lalibela', 'ET', 'Rock-hewn Churches, Lalibela', ['Lalibela', 'Church of Saint George'], 'Ethiopia - sunset at Church of Saint George, Lalibela 01.jpg'], ['Great Mosque of Djenné', 'ML', null, ['Great Mosque of Djenne']],
   ['Hassan II Mosque', 'MA'], ['Robben Island', 'ZA'], ['CN Tower', 'CA', null, [], 'Toronto - ON - CN Tower (Bremner Blvd).jpg'], ['Château Frontenac', 'CA', null, ['Chateau Frontenac']],
-  ['Hollywood Sign', 'US'], ['Space Needle', 'US'], ['White House', 'US'], ['Teotihuacan', 'MX'], ['Tikal', 'GT'], ['Panama Canal', 'PA'],
+  ['Hollywood Sign', 'US'], ['Space Needle', 'US'], ['White House', 'US'], ['Teotihuacan', 'MX'], ['Tikal', 'GT'], ['Panama Canal', 'PA', null, [], 'Panama Canal Miraflores Locks.jpg'],
   ['Galápagos Islands', 'EC', null, ['Galapagos Islands']], ['Salar de Uyuni', 'BO'], ['Perito Moreno Glacier', 'AR'], ['Torres del Paine', 'CL', 'Torres del Paine National Park'],
   ['Angel Falls', 'VE'], ['Sugarloaf Mountain', 'BR'], ['Milford Sound', 'NZ'], ['Great Barrier Reef', 'AU'], ['Twelve Apostles', 'AU', 'The Twelve Apostles (Victoria)'],
   // Added 2026-11-18 (names avoid giving the country away where possible)
