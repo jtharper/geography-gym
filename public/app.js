@@ -1,7 +1,7 @@
 /* Geography Gym: one quiz engine shared by every topic. No build step: edit and deploy. */
 "use strict";
 // Bump with every deploy that changes data or code, so browsers never mix old and new files (index.html uses the same value).
-const VERSION = "202611191424";
+const VERSION = "202611191814";
 const vurl = u => u + "?v=" + VERSION;
 
 /* ---------- topics ----------
@@ -1977,10 +1977,9 @@ const mp = (() => {
       <h1>${esc(head)}</h1>${tally}
       <div class="mp-players">${card("You", mine.right, iWin, fmtTenths(mine.ms / 1000))}${card(opp.name, oppDone ? o.right : null, theyWin, oppDone ? fmtTenths(o.ms / 1000) : "left the game")}</div>
       ${canRematch ? `<button class="btn primary" type="button" id="mpRematch"${rematchAsked ? " disabled" : ""}>${rematchAsked ? `Waiting for ${esc(opp.name)}…` : g.oppRematch ? `${esc(opp.name)} wants to go again! Challenge again` : "Challenge again"}</button>` : `<p class="mp-note">${esc(opp.name)} left the game.</p>`}
-      <div class="mp-row"><button class="btn" type="button" id="mpNew">New game</button><button class="btn" type="button" id="mpLeave">Leave</button></div>
+      <div class="mp-row"><button class="btn" type="button" id="mpLeave">Leave</button></div>
     </div>${resultList(g.qs.map(q => ({ t: g.t, q })), g.marks)}`;
     const rb = $("#mpRematch"); if (rb) rb.addEventListener("click", () => { rematchAsked = true; send({ t: "rematch" }); results(); });
-    $("#mpNew").addEventListener("click", openPanel);
     $("#mpLeave").addEventListener("click", goHome);
   }
   function fail(kind) {
